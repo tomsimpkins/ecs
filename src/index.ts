@@ -25,7 +25,7 @@ class Drawable extends Component {}
 class Selectable extends Component {}
 class Selected extends Component {}
 class Clickable extends Component {}
-class Clicked extends Component {}
+
 class Dragging extends Component {
   constructor(public entityRef: Entity) {
     super();
@@ -73,15 +73,15 @@ class Zoomable extends Component {
 }
 const createBackground = () => {
   const pan = new Pannable(0, 0);
-  const position = new Positionable(0, 0, 0);
-  const box = new BoundingBoxable(canvas.width, canvas.height);
+  // const position = new Positionable(0, 0, 0);
+  // const box = new BoundingBoxable(canvas.width, canvas.height);
   const clickable = new Clickable();
   const zoom = new Zoomable(1);
   const scroll = new Scrollable();
 
   const background = ecs.addEntity();
-  ecs.addComponent(background, position);
-  ecs.addComponent(background, box);
+  // ecs.addComponent(background, position);
+  // ecs.addComponent(background, box);
   ecs.addComponent(background, pan);
   ecs.addComponent(background, clickable);
   ecs.addComponent(background, zoom);
@@ -101,12 +101,8 @@ ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
 class KayboardInputSystem extends System {
   componentsRequired = new Set([Selected, Velocityable]);
 
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "keyboard")) {
-      return;
-    }
-
-    const keys = context.event.keys;
+  update(entities: Set<Entity>, event) {
+    const keys = event.keys;
 
     let vy: number | undefined;
     if (keys.has("ArrowUp")) {
@@ -150,17 +146,13 @@ class DoubleClickHandlerSystem extends System {
   };
 
   componentsRequired = new Set([Positionable]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "doubleClick")) {
-      return;
-    }
-
+  update(entities: Set<Entity>, event) {
     const transform = this.ecs
       .getComponents(TRANSFORM)
       .get(Transform)
       .matrix.inverse();
 
-    const { x, y } = this.toLocalCoords(context.event, transform);
+    const { x, y } = this.toLocalCoords(event, transform);
 
     createRect(x, y);
   }
@@ -211,52 +203,53 @@ class MouseStartSystem extends System {
     return entities
       .map<[number, Entity]>((entity) => [
         this.ecs.getComponents(entity).get(Positionable).z,
-        entity
+        entity,
       ])
       .reduce((acc, item) => (item[0] > acc[0] ? item : acc))[1];
   };
 
   componentsRequired = new Set([Clickable, Positionable, BoundingBoxable]);
-  update(entities: Set<Entity>, context) {
-    if (!context.event) {
-      return;
-    }
-
+  update(entities: Set<Entity>, event) {
     const transformMatrix = this.ecs
       .getComponents(TRANSFORM)
       .get(Transform)
       .matrix.inverse();
 
-    switch (context.event.type) {
+    switch (event.type) {
       case "click": {
-        const pos = this.toLocalCoords(context.event, transformMatrix);
+        const pos = this.toLocalCoords(event, transformMatrix);
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
 
         if (entity !== undefined) {
-          this.ecs.addComponent(entity, new Clicked());
+          this.ecs.enqueueEvent({ type: "clicked", entity });
         }
         break;
       }
       case "dragstart": {
-        const pos = this.toLocalCoords(context.event, transformMatrix);
+        const pos = this.toLocalCoords(event, transformMatrix);
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
         const canDragEntityWithLeftMouseButton =
           entity !== undefined && this.ecs.getComponents(entity).has(Drawable);
 
-        if (context.event.button === 0 && !canDragEntityWithLeftMouseButton) {
-          const dragRect = this.ecs.addEntity();
-          this.ecs.addComponent(
-            dragRect,
-            new Positionable(context.event.x, context.event.y, 2)
-          );
-          this.ecs.addComponent(dragRect, new BoundingBoxable(0, 0));
-          this.ecs.addComponent(dragRect, new SelectionDragBox());
-          // this.ecs.addComponent(dragRect, new Drawable());
-          console.log(dragRect);
-          return;
-        }
+        // if (event.button === 0 && !canDragEntityWithLeftMouseButton) {
+        //   const dragRect = this.ecs.addEntity();
+        //   this.ecs.addComponent(
+        //     dragRect,
+        //     new Positionable(event.x, event.y, 2)
+        //   );
+        //   this.ecs.addComponent(dragRect, new BoundingBoxable(0, 0));
+        //   this.ecs.addComponent(dragRect, new SelectionDragBox());
+        //   // this.ecs.addComponent(dragRect, new Drawable());
+        //   console.log(dragRect);
+        //   return;
+        // }
 
-        if (entity !== undefined) {
+        if (entity === undefined) {
+          this.ecs.addSystem(new PanSystem(canvas, ctx), [
+            "dragmove",
+            "dragend",
+          ]);
+        } else {
           const dragEl = this.ecs.addEntity();
           const positionable = this.ecs.getComponents(entity).get(Positionable);
 
@@ -265,6 +258,7 @@ class MouseStartSystem extends System {
             dragEl,
             new Positionable(positionable.x, positionable.y, 2)
           );
+          ecs.addSystem(new DragElementSystem(ctx), ["dragmove", "dragend"]);
         }
 
         break;
@@ -275,18 +269,15 @@ class MouseStartSystem extends System {
 
 class MouseScrollSystem extends System {
   componentsRequired = new Set([Scrollable]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "wheel")) {
-      return;
-    }
-
+  update(entities: Set<Entity>, event, context) {
     for (const entity of entities) {
-      this.ecs.addComponent(entity, new Scrolled(context.event.d));
+      this.ecs.enqueueEvent({ type: "zoom", d: event.d });
+      break;
     }
   }
 }
 
-class HandleScrollZoomSystem extends System {
+class ZoomSystem extends System {
   constructor(
     public canvas: HTMLCanvasElement,
     public ctx: CanvasRenderingContext2D
@@ -294,47 +285,64 @@ class HandleScrollZoomSystem extends System {
     super();
   }
 
-  componentsRequired = new Set([Scrollable, Zoomable]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "wheel")) {
-      return;
-    }
-
-    let scaleFactor = context.event.d <= 0 ? 1.2 : 1 / 1.2;
-
+  componentsRequired = new Set([Zoomable]);
+  update(entities: Set<Entity>, event) {
     for (const entity of entities) {
       const transform = this.ecs.getComponents(TRANSFORM).get(Transform);
+      const { d } = event;
+      const scaleFactor = d <= 0 ? 1.2 : 1 / 1.2;
+
       const matrix = transform.matrix;
       transform.matrix = matrix.scale(scaleFactor, scaleFactor);
     }
   }
 }
 
-class DragHandlerSystem extends System {
+class DragElementSystem extends System {
   constructor(public ctx: CanvasRenderingContext2D) {
     super();
   }
 
-  componentsRequired = new Set([Dragging]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragmove")) {
-      return;
-    }
+  componentsRequired = new Set([Dragging, Positionable]);
+  update(entities: Set<Entity>, event) {
+    if (event.type === "dragmove") {
+      for (const entity of entities) {
+        const comps = this.ecs.getComponents(entity);
+        const originalPosition = comps.get(Positionable);
+        const dragEl = comps.get(Dragging).entityRef;
 
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const originalPosition = comps.get(Positionable);
-      const dragEl = comps.get(Dragging).entityRef;
+        const dragPosition = this.ecs.getComponents(dragEl).get(Positionable);
 
-      const dragPosition = this.ecs.getComponents(dragEl).get(Positionable);
+        const mouseToCanvas = this.ecs
+          .getComponents(TRANSFORM)
+          .get(Transform)
+          .matrix.inverse();
 
-      const mouseToCanvas = this.ecs
-        .getComponents(TRANSFORM)
-        .get(Transform)
-        .matrix.inverse();
+        dragPosition.x = originalPosition.x + mouseToCanvas.a * event.dx;
+        dragPosition.y = originalPosition.y + mouseToCanvas.a * event.dy;
+      }
+    } else if (event.type === "dragend") {
+      for (const entity of entities) {
+        const comps = this.ecs.getComponents(entity);
+        const dragEl = comps.get(Dragging).entityRef;
 
-      dragPosition.x = originalPosition.x + mouseToCanvas.a * context.event.dx;
-      dragPosition.y = originalPosition.y + mouseToCanvas.a * context.event.dy;
+        const originalPosition = this.ecs
+          .getComponents(entity)
+          .get(Positionable);
+
+        const mouseToCanvas = this.ecs
+          .getComponents(TRANSFORM)
+          .get(Transform)
+          .matrix.inverse();
+
+        originalPosition.x += mouseToCanvas.a * event.dx;
+        originalPosition.y += mouseToCanvas.a * event.dy;
+
+        this.ecs.removeComponent(entity, Dragging);
+        this.ecs.removeEntity(dragEl);
+      }
+
+      this.ecs.removeSystem(this);
     }
   }
 }
@@ -343,10 +351,10 @@ class DragSelectionHandlerSystem extends System {
   componentsRequired = new Set([
     SelectionDragBox,
     Positionable,
-    BoundingBoxable
+    BoundingBoxable,
   ]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragmove")) {
+  update(entities: Set<Entity>, event) {
+    if (!(event && event.type === "dragmove")) {
       return;
     }
 
@@ -355,47 +363,16 @@ class DragSelectionHandlerSystem extends System {
       const position = comps.get(Positionable);
       const box = comps.get(BoundingBoxable);
 
-      box.w = context.event.dx;
-      box.h = context.event.dy;
-    }
-  }
-}
-
-class DragEndHandlerSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
-    super();
-  }
-
-  componentsRequired = new Set([Drawable, Dragging]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragend")) {
-      return;
-    }
-
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const dragEl = comps.get(Dragging).entityRef;
-
-      const originalPosition = this.ecs.getComponents(entity).get(Positionable);
-
-      this.ecs.removeComponent(entity, Dragging);
-      this.ecs.removeEntity(dragEl);
-
-      const mouseToCanvas = this.ecs
-        .getComponents(TRANSFORM)
-        .get(Transform)
-        .matrix.inverse();
-
-      originalPosition.x += mouseToCanvas.a * context.event.dx;
-      originalPosition.y += mouseToCanvas.a * context.event.dy;
+      box.w = event.dx;
+      box.h = event.dy;
     }
   }
 }
 
 class DragSelectionEndHandlerSystem extends System {
   componentsRequired = new Set([SelectionDragBox]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragend")) {
+  update(entities: Set<Entity>, event) {
+    if (!(event && event.type === "dragend")) {
       return;
     }
 
@@ -406,109 +383,53 @@ class DragSelectionEndHandlerSystem extends System {
   }
 }
 
-class PanDragHandlerSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
+class PanSystem extends System {
+  constructor(
+    public canvas: HTMLCanvasElement,
+    public ctx: CanvasRenderingContext2D
+  ) {
     super();
   }
-  componentsRequired = new Set([Pannable, Dragging]);
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragmove")) {
+  componentsRequired = new Set([Pannable]);
+  update(entities: Set<Entity>, event) {
+    if (entities.size !== 1) {
+      console.warn("exited pan due to multiple pannable elements");
       return;
     }
 
-    for (const entity of entities) {
-      const pan = this.ecs.getComponents(entity).get(Pannable);
-      const transform = this.ecs.getComponents(TRANSFORM).get(Transform);
-      const currentMatrix = transform.matrix;
+    const [entity] = [...entities];
+    const comps = this.ecs.getComponents(entity);
+    const pan = comps.get(Pannable);
+    const transform = this.ecs.getComponents(TRANSFORM).get(Transform);
+    const currentMatrix = transform.matrix;
 
-      currentMatrix.e = pan.x + context.event.dx;
-      currentMatrix.f = pan.y + context.event.dy;
-    }
-  }
-}
+    currentMatrix.e = pan.x + event.dx;
+    currentMatrix.f = pan.y + event.dy;
 
-class PanDragEndHandlerSystem extends System {
-  componentsRequired = new Set([
-    Positionable,
-    Pannable,
-    Dragging,
-    BoundingBoxable
-  ]);
+    if (event.type === "dragend") {
+      pan.x = currentMatrix.e;
+      pan.y = currentMatrix.f;
 
-  update(entities: Set<Entity>, context) {
-    if (!(context.event && context.event.type === "dragend")) {
-      return;
-    }
-
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const dragEl = comps.get(Dragging).entityRef;
-
-      const pan = comps.get(Pannable);
-      pan.x += context.event.dx;
-      pan.y += context.event.dy;
-
-      this.ecs.removeComponent(entity, Dragging);
-      this.ecs.removeEntity(dragEl);
-    }
-  }
-}
-
-class PanSyncSystem extends System {
-  constructor(public canvas: HTMLCanvasElement) {
-    super();
-  }
-  componentsRequired = new Set([Positionable, Pannable, BoundingBoxable]);
-
-  update(entities: Set<Entity>) {
-    for (const entity of entities) {
-      const transform = this.ecs
-        .getComponents(TRANSFORM)
-        .get(Transform)
-        .matrix.inverse();
-      const comps = this.ecs.getComponents(entity);
-
-      const position = comps.get(Positionable);
-      position.x = transform.e;
-      position.y = transform.f;
-
-      const box = comps.get(BoundingBoxable);
-      box.w = transform.a * this.canvas.width;
-      box.h = transform.a * this.canvas.height;
+      this.ecs.removeSystem(this);
     }
   }
 }
 
 class SelectionSystem extends System {
-  componentsRequired = new Set([Selectable, Clicked]);
-  update(entities: Set<Entity>) {
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const selected = comps.has(Selected);
-
-      if (selected) {
-        this.ecs.removeComponent(entity, Selected);
-      } else {
-        this.ecs.addComponent(entity, new Selected());
-      }
+  componentsRequired = new Set([Selectable]);
+  update(entities: Set<Entity>, event) {
+    if (!entities.has(event.entity)) {
+      return;
     }
-  }
-}
 
-class CleanupClickedSystem extends System {
-  componentsRequired = new Set([Clicked]);
-  update(entities: Set<Entity>) {
-    for (const entity of entities) {
-      this.ecs.removeComponent(entity, Clicked);
-    }
-  }
-}
+    const { entity } = event;
+    const comps = this.ecs.getComponents(entity);
+    const selected = comps.has(Selected);
 
-class CleanupScrolledSystem extends System {
-  componentsRequired = new Set([Scrolled]);
-  update(entities: Set<Entity>) {
-    for (const entity of entities) {
-      this.ecs.removeComponent(entity, Scrolled);
+    if (selected) {
+      this.ecs.removeComponent(entity, Selected);
+    } else {
+      this.ecs.addComponent(entity, new Selected());
     }
   }
 }
@@ -535,8 +456,11 @@ class RenderSystem extends System {
   componentsRequired = new Set([Positionable, Drawable, BoundingBoxable]);
   update(entities: Set<Entity>) {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.resetTransform();
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 0.1;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
     ctx.restore();
 
     ctx.save();
@@ -554,20 +478,19 @@ class RenderSystem extends System {
 }
 
 class RenderDebugSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
+  constructor(
+    public canvas: HTMLCanvasElement,
+    public ctx: CanvasRenderingContext2D
+  ) {
     super();
   }
 
-  componentsRequired = new Set([Positionable, Pannable, BoundingBoxable]);
+  componentsRequired = new Set([Pannable]);
   update(entities: Set<Entity>) {
     const matrix = this.ecs.getComponents(TRANSFORM).get(Transform).matrix;
-    ctx.save();
-    ctx.setTransform(matrix);
 
     for (const entity of entities) {
       const comps = this.ecs.getComponents(entity);
-      const position = comps.get(Positionable);
-      const box = comps.get(BoundingBoxable);
       const pan = comps.get(Pannable);
 
       ctx.save();
@@ -577,12 +500,8 @@ class RenderDebugSystem extends System {
 
       ctx.restore();
 
-      this.ctx.globalAlpha = 0.1;
-      this.ctx.fillRect(position.x, position.y, box.w, box.h);
-      this.ctx.globalAlpha = 1;
       break;
     }
-    ctx.restore();
   }
 }
 
@@ -595,7 +514,7 @@ class RenderDragSystem extends System {
     Positionable,
     Dragging,
     BoundingBoxable,
-    Drawable
+    Drawable,
   ]);
   update(entities: Set<Entity>) {
     ctx.save();
@@ -622,10 +541,10 @@ class RenderDragSelectionSystem extends System {
   componentsRequired = new Set([
     Positionable,
     BoundingBoxable,
-    SelectionDragBox
+    SelectionDragBox,
   ]);
 
-  update(entities: Set<Entity>, context) {
+  update(entities: Set<Entity>) {
     ctx.save();
     ctx.globalAlpha = 0.2;
     for (const entity of entities) {
@@ -639,52 +558,41 @@ class RenderDragSelectionSystem extends System {
   }
 }
 
-ecs.addSystem(new KayboardInputSystem());
-ecs.addSystem(new MouseStartSystem(canvas, ctx));
-ecs.addSystem(new MouseScrollSystem());
-ecs.addSystem(new DoubleClickHandlerSystem(canvas));
+ecs.addSystem(new KayboardInputSystem(), ["keyboard"]);
+ecs.addSystem(new MouseStartSystem(canvas, ctx), ["click", "dragstart"]);
+ecs.addSystem(new MouseScrollSystem(), ["wheel"]);
+ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
-ecs.addSystem(new PanDragHandlerSystem(ctx));
-ecs.addSystem(new DragHandlerSystem(ctx));
 ecs.addSystem(new DragSelectionHandlerSystem());
-
-ecs.addSystem(new HandleScrollZoomSystem(canvas, ctx));
-
-ecs.addSystem(new PanDragEndHandlerSystem());
-ecs.addSystem(new DragEndHandlerSystem(ctx));
 ecs.addSystem(new DragSelectionEndHandlerSystem());
 
-ecs.addSystem(new SelectionSystem());
+ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-ecs.addSystem(new MovementSystem());
+ecs.addSystem(new SelectionSystem(), ["clicked"]);
+ecs.addSystem(new MovementSystem(), ["frame"]);
 
-ecs.addSystem(new PanSyncSystem(canvas));
+ecs.addSystem(new RenderSystem(ctx), "frame");
+ecs.addSystem(new RenderDragSystem(ctx), "frame");
+ecs.addSystem(new RenderDebugSystem(canvas, ctx), "frame");
 
-ecs.addSystem(new RenderSystem(ctx));
-ecs.addSystem(new RenderDragSystem(ctx));
-ecs.addSystem(new RenderDebugSystem(ctx));
 ecs.addSystem(new RenderDragSelectionSystem(ctx));
-
-ecs.addSystem(new CleanupClickedSystem());
-ecs.addSystem(new CleanupScrolledSystem());
 
 const go = () => {
   const obs = createInputEventObservable(canvas);
   const rect = canvas.getBoundingClientRect();
 
-  ecs.update({ event: undefined });
+  ecs.update({ type: "init" });
   obs.subscribe((ev) => {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    ecs.update({
-      event:
-        "x" in ev && "y" in ev
-          ? { ...ev, x: ev.x - rect.left, y: ev.y - rect.top }
-          : ev
-    });
+    ecs.update(
+      "x" in ev && "y" in ev
+        ? { ...ev, x: ev.x - rect.left, y: ev.y - rect.top }
+        : ev
+    );
   });
 };
 

@@ -1,12 +1,18 @@
+import { EventBus } from "./eventBus";
+
 export type Entity = number;
 export abstract class Component {}
 export abstract class System {
   public abstract componentsRequired: Set<ComponentClass>;
   public abstract update(
     entities: Set<Entity>,
-    context: { event?: object }
+    event: object,
+    context: object
   ): void;
   public ecs: ECS;
+  public respondsTo = (event: string) => {
+    this.ecs.connectSystemToEvent(event, this);
+  };
 }
 
 type ComponentClass<T extends Component = Component> = new (
@@ -43,6 +49,7 @@ class ComponentContainer {
 }
 
 export class ECS {
+  private eventBus = new EventBus();
   private entities = new Map<Entity, ComponentContainer>();
   private systems = new Map<System, Set<Entity>>();
 
@@ -64,22 +71,22 @@ export class ECS {
 
   // API: Components
   public addComponent(entity: Entity, component: Component): void {
-    this.entities.get(entity).add(component);
+    this.entities.get(entity)!.add(component);
     this.checkE(entity);
   }
 
   public getComponents(entity: Entity): ComponentContainer {
-    return this.entities.get(entity);
+    return this.entities.get(entity)!;
   }
 
   public removeComponent(entity: Entity, componentClass: ComponentClass): void {
-    this.entities.get(entity).delete(componentClass);
+    this.entities.get(entity)!.delete(componentClass);
     this.checkE(entity);
   }
 
   // API: Systems
 
-  public addSystem(system: System): void {
+  public addSystem(system: System, eventKey?: string | string[]): void {
     // Checking invariant: systems should not have an empty
     // Components list, or they'll run on every entity. Simply remove
     // or special case this check if you do want a System that runs
@@ -99,9 +106,26 @@ export class ECS {
     for (let entity of this.entities.keys()) {
       this.checkES(entity, system);
     }
+
+    if (!eventKey) {
+      return;
+    }
+
+    for (const k of typeof eventKey === "string" ? [eventKey] : eventKey) {
+      this.connectSystemToEvent(k, system);
+    }
   }
 
   public removeSystem(system: System): void {
+    for (const [eventKey, cb] of this.listenersBySystem.get(system) ?? []) {
+      console.log(
+        "deleteing listener: ",
+        eventKey,
+        this.eventBus.removeListener(eventKey, cb)
+      );
+    }
+    this.listenersBySystem.delete(system);
+
     this.systems.delete(system);
   }
 
@@ -110,18 +134,29 @@ export class ECS {
    * updates all Systems, then destroys any Entities that were marked
    * for removal.
    */
-  public update(context): void {
+  public update(event): void {
+    this.eventBus.enqueueEvent(event);
+    while (this.eventBus.dequeueEvent()) {}
+
+    this.eventBus.enqueueEvent({ type: "frame" });
+    this.eventBus.dequeueEvent();
+
     // Update all systems. (Later, we'll add a way to specify the
     // update order.)
-    for (let [system, entities] of this.systems.entries()) {
-      system.update(entities, context);
-    }
+    // for (const system of this.systems.keys()) {
+    //   this.updateSystem(system, event);
+    // }
 
     // Remove any entities that were marked for deletion during the
     // update.
     while (this.entitiesToDestroy.length > 0) {
-      this.destroyEntity(this.entitiesToDestroy.pop());
+      this.destroyEntity(this.entitiesToDestroy.pop()!);
     }
+  }
+
+  private updateSystem(system: System, event) {
+    const entities = this.systems.get(system)!;
+    system.update(entities, event, { enqueueEvent: this.enqueueEvent });
   }
 
   // Private methods for doing internal state checks and mutations.
@@ -140,14 +175,29 @@ export class ECS {
   }
 
   private checkES(entity: Entity, system: System): void {
-    let have = this.entities.get(entity);
+    let have = this.entities.get(entity)!;
     let need = system.componentsRequired;
     if (have.hasAll(need)) {
       // should be in system
-      this.systems.get(system).add(entity); // no-op if in
+      this.systems.get(system)!.add(entity); // no-op if in
     } else {
       // should not be in system
-      this.systems.get(system).delete(entity); // no-op if out
+      this.systems.get(system)!.delete(entity); // no-op if out
     }
   }
+
+  public enqueueEvent = (event) => this.eventBus.enqueueEvent(event);
+
+  private listenersBySystem = new Map<System, [string, any][]>();
+  public connectSystemToEvent = (eventKey: string, system: System) => {
+    const cb = (event) => {
+      this.updateSystem(system, event);
+    };
+    this.eventBus.addListener(eventKey, cb);
+
+    if (!this.listenersBySystem.has(system)) {
+      this.listenersBySystem.set(system, []);
+    }
+    this.listenersBySystem.get(system)!.push([eventKey, cb]);
+  };
 }
