@@ -1,0 +1,49 @@
+import { Component, Entity } from "../ECS";
+
+// components are independent, 
+// but there are archetypes which represent common groups of components
+export class Positionable extends Component {
+    constructor(public x: number, public y: number, public z: number) {
+      super();
+    }
+  }
+  export class Velocityable extends Component {
+    constructor(public vx: number, public vy: number) {
+      super();
+    }
+  }
+  export class BoundingBoxable extends Component {
+    constructor(public w: number, public h: number) {
+      super();
+    }
+  }
+  export class Drawable extends Component {}
+  export class Selectable extends Component {}
+  export class Selected extends Component {}
+  export class Clickable extends Component {}
+  
+  export class Dragging extends Component {
+    constructor(public entityRef: Entity) {
+      super();
+    }
+  }
+  
+  export class Transform extends Component {
+    constructor(public matrix: DOMMatrix) {
+      super();
+    }
+  }
+
+  export class Scrollable extends Component {}
+  export class Pannable extends Component {
+  constructor(public x: number, public y: number) {
+    super();
+  }
+}
+export class Zoomable extends Component {
+  constructor(public d: number) {
+    super();
+  }
+}
+
+export class SelectionDragBox extends Component {}

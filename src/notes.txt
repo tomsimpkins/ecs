@@ -1,0 +1,26 @@
+Think about different concerns
+Think about axes and grouping of boxes separately
+
+We're going to have an area in which to draw
+A number of buckets we want to draw
+Some sort of size of bounding boxes
+Width is probably the same for all columns
+
+Therefore, a column is given a list of boxes
+Also column has a direction (will have to go up infinitely, no max height)
+
+A function above that will iterate over the groups
+ - position each group 
+ - determine each group's Width
+
+Make drawing library independent of systems
+A system can call the drawing library functions
+
+Make the Layouter independent of canvas
+receives a list of bounding boxes and returns a list of rectangles
+  - each rectangle has a position, width and height
+  - further down, we have a function which draws these things
+
+You're returning json which returns positions
+You want transform/group to be one of your shapes, 
+so you can tranform a group of boxes to its position on the x axis
