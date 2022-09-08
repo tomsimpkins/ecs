@@ -1,4 +1,5 @@
 import { Transform } from "./components/index";
+import { groupByBuckets, parseIndicesToValues } from './dataLayer/dataQuery';
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
 import { createBackground, createRect } from "./init/utils";
@@ -14,7 +15,7 @@ import {
   RenderSystem,
   SelectionByAreaSystem,
   SelectionSystem,
-  ZoomSystem,
+  ZoomSystem
 } from "./systems";
 
 // console.clear();
@@ -72,5 +73,16 @@ const go = () => {
     );
   });
 };
+
+const testBucketGroups = groupByBuckets("role")
+
+const salesManagerBuckets = testBucketGroups.filter(b=>b.bucketKey === "Sales manager")[0]
+
+const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname")
+
+// console.log({testBucketGroups})
+// console.log({salesManagerBuckets})
+console.log({names})
+// console.log(getBucketCountsFromProperty(filterByPropertyKey("role")))
 
 go();
