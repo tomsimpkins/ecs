@@ -1,4 +1,3 @@
-import { AnimationStartSystem, AnimationSystem } from "./systems/index";
 import { Transform } from "./components/index";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
@@ -29,14 +28,9 @@ const ecs = new ECS();
 
 const TRANSFORM = ecs.addEntity(); // corresponds to TRANSFORM_ELEMENT in constants
 ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
-const w = 20;
-const h = 20;
-for (let i = 0; i < 1000; i++) {
-  const c = (i / 30) | 0;
-  const r = i % 30;
-  createRect(ecs, 100 + c * (w + 2), 100 + r * (h + 2), 20, 20);
-}
-
+createRect(ecs, 60, 10);
+createRect(ecs, 80, 80);
+createRect(ecs, 50, 40);
 createBackground(ecs);
 
 // add all the systems, which subscribe to the appropriate events
@@ -47,7 +41,7 @@ ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-ecs.addSystem(new AnimationStartSystem(), ["animationStart"]);
+// ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
 
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
@@ -58,7 +52,6 @@ ecs.addSystem(new RenderSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
 ecs.addSystem(new RenderDebugSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSelectionSystem(ctx), "frame");
-ecs.addSystem(new AnimationSystem(), ["frame"]);
 
 const go = () => {
   const obs = createInputEventObservable(canvas);
