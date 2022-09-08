@@ -141,9 +141,7 @@ export class ECS {
     // enqueue then dequeue event
     this.eventBus.enqueueEvent(event);
     while (this.eventBus.dequeueEvent()) {} // dequeue event triggers logic
-
-    this.eventBus.enqueueEvent({ type: "frame" }); // system has settled, so draw
-    this.eventBus.dequeueEvent();
+    // system has settled, so draw
 
     // Update all systems. (Later, we'll add a way to specify the
     // update order.)
