@@ -56,11 +56,6 @@ const createRect = (x: number, y: number) => {
   ecs.addComponent(rect, select);
 };
 class Scrollable extends Component {}
-class Scrolled extends Component {
-  constructor(public d: number) {
-    super();
-  }
-}
 class Pannable extends Component {
   constructor(public x: number, public y: number) {
     super();
@@ -73,15 +68,11 @@ class Zoomable extends Component {
 }
 const createBackground = () => {
   const pan = new Pannable(0, 0);
-  // const position = new Positionable(0, 0, 0);
-  // const box = new BoundingBoxable(canvas.width, canvas.height);
   const clickable = new Clickable();
   const zoom = new Zoomable(1);
   const scroll = new Scrollable();
 
   const background = ecs.addEntity();
-  // ecs.addComponent(background, position);
-  // ecs.addComponent(background, box);
   ecs.addComponent(background, pan);
   ecs.addComponent(background, clickable);
   ecs.addComponent(background, zoom);
@@ -171,8 +162,13 @@ class MouseStartSystem extends System {
     return new DOMPoint(pos.x, pos.y).matrixTransform(m);
   };
 
-  private entityHitTest(entities: Iterable<Entity>, point: Position): Entity[] {
+  private entityHitTest(
+    entities: Iterable<Entity>,
+    point: Position,
+    dims: { w: number; h: number } = { w: 0, h: 0 }
+  ): Entity[] {
     const { x, y } = point;
+    const { w, h } = dims;
 
     const results: Entity[] = [];
     for (const entity of entities) {
@@ -181,9 +177,9 @@ class MouseStartSystem extends System {
       const box = comps.get(BoundingBoxable);
 
       if (
-        x < position.x ||
+        x + w < position.x ||
         x > position.x + box.w ||
-        y < position.y ||
+        y + h < position.y ||
         y > position.y + box.h
       ) {
         continue;
@@ -221,30 +217,25 @@ class MouseStartSystem extends System {
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
 
         if (entity !== undefined) {
-          this.ecs.enqueueEvent({ type: "clicked", entity });
+          this.ecs.enqueueEvent({ type: "selectEntity", entity });
         }
         break;
       }
       case "dragstart": {
         const pos = this.toLocalCoords(event, transformMatrix);
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
-        const canDragEntityWithLeftMouseButton =
-          entity !== undefined && this.ecs.getComponents(entity).has(Drawable);
 
-        // if (event.button === 0 && !canDragEntityWithLeftMouseButton) {
-        //   const dragRect = this.ecs.addEntity();
-        //   this.ecs.addComponent(
-        //     dragRect,
-        //     new Positionable(event.x, event.y, 2)
-        //   );
-        //   this.ecs.addComponent(dragRect, new BoundingBoxable(0, 0));
-        //   this.ecs.addComponent(dragRect, new SelectionDragBox());
-        //   // this.ecs.addComponent(dragRect, new Drawable());
-        //   console.log(dragRect);
-        //   return;
-        // }
+        if (entity === undefined && event.button === 0) {
+          this.ecs.addSystem(new DragSelectionHandlerSystem(), [
+            "dragmove",
+            "dragend",
+          ]);
 
-        if (entity === undefined) {
+          const dragEl = this.ecs.addEntity();
+          this.ecs.addComponent(dragEl, new Positionable(event.x, event.y, 2));
+          this.ecs.addComponent(dragEl, new BoundingBoxable(0, 0));
+          this.ecs.addComponent(dragEl, new SelectionDragBox());
+        } else if (entity === undefined) {
           this.ecs.addSystem(new PanSystem(canvas, ctx), [
             "dragmove",
             "dragend",
@@ -354,31 +345,37 @@ class DragSelectionHandlerSystem extends System {
     BoundingBoxable,
   ]);
   update(entities: Set<Entity>, event) {
-    if (!(event && event.type === "dragmove")) {
+    if (entities.size !== 1) {
+      console.warn(
+        "exited drag selection due to multiple drag selection elements"
+      );
       return;
     }
 
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const position = comps.get(Positionable);
-      const box = comps.get(BoundingBoxable);
+    const [entity] = [...entities];
 
-      box.w = event.dx;
-      box.h = event.dy;
-    }
-  }
-}
+    const comps = this.ecs.getComponents(entity);
+    const box = comps.get(BoundingBoxable);
+    const position = comps.get(Positionable);
 
-class DragSelectionEndHandlerSystem extends System {
-  componentsRequired = new Set([SelectionDragBox]);
-  update(entities: Set<Entity>, event) {
-    if (!(event && event.type === "dragend")) {
-      return;
-    }
+    box.w = event.dx;
+    box.h = event.dy;
 
-    for (const entity of entities) {
+    if (event.type === "dragend") {
       this.ecs.removeComponent(entity, SelectionDragBox);
       this.ecs.removeEntity(entity);
+
+      this.ecs.removeSystem(this);
+
+      this.ecs.enqueueEvent({
+        type: "selectArea",
+        ...(box.w < 0
+          ? { x: position.x + box.w, w: -box.w }
+          : { x: position.x, w: box.w }),
+        ...(box.h < 0
+          ? { y: position.y + box.h, h: -box.h }
+          : { y: position.y, h: box.h }),
+      });
     }
   }
 }
@@ -429,6 +426,69 @@ class SelectionSystem extends System {
     if (selected) {
       this.ecs.removeComponent(entity, Selected);
     } else {
+      this.ecs.addComponent(entity, new Selected());
+    }
+  }
+}
+
+class SelectionByAreaSystem extends System {
+  componentsRequired = new Set([Selectable, Positionable, BoundingBoxable]);
+
+  private toLocalCoords = (pos: Position, m: DOMMatrix): Position => {
+    return new DOMPoint(pos.x, pos.y).matrixTransform(m);
+  };
+
+  private entityHitTest(
+    entities: Iterable<Entity>,
+    point: Position,
+    dims: { w: number; h: number } = { w: 0, h: 0 }
+  ): Entity[] {
+    const { x, y } = point;
+    const { w, h } = dims;
+
+    const results: Entity[] = [];
+    for (const entity of entities) {
+      const comps = this.ecs.getComponents(entity);
+      const position = comps.get(Positionable);
+      const box = comps.get(BoundingBoxable);
+
+      if (
+        x + w < position.x ||
+        x > position.x + box.w ||
+        y + h < position.y ||
+        y > position.y + box.h
+      ) {
+        continue;
+      }
+
+      results.push(entity);
+    }
+
+    return results;
+  }
+
+  update(entities: Set<Entity>, event) {
+    const { x, y, w, h } = event;
+
+    for (const entity of entities) {
+      const comps = this.ecs.getComponents(entity);
+      const selected = comps.get(Selected);
+      if (selected) {
+        this.ecs.removeComponent(entity, Selected);
+      }
+    }
+
+    const mouseToCanvas = this.ecs
+      .getComponents(TRANSFORM)
+      .get(Transform)
+      .matrix.inverse();
+    const hits = this.entityHitTest(
+      entities,
+      this.toLocalCoords({ x, y }, mouseToCanvas),
+      { w, h }
+    );
+
+    for (const entity of hits) {
       this.ecs.addComponent(entity, new Selected());
     }
   }
@@ -563,19 +623,16 @@ ecs.addSystem(new MouseStartSystem(canvas, ctx), ["click", "dragstart"]);
 ecs.addSystem(new MouseScrollSystem(), ["wheel"]);
 ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
-ecs.addSystem(new DragSelectionHandlerSystem());
-ecs.addSystem(new DragSelectionEndHandlerSystem());
-
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-ecs.addSystem(new SelectionSystem(), ["clicked"]);
+ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
+ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
 ecs.addSystem(new MovementSystem(), ["frame"]);
 
 ecs.addSystem(new RenderSystem(ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
 ecs.addSystem(new RenderDebugSystem(canvas, ctx), "frame");
-
-ecs.addSystem(new RenderDragSelectionSystem(ctx));
+ecs.addSystem(new RenderDragSelectionSystem(ctx), "frame");
 
 const go = () => {
   const obs = createInputEventObservable(canvas);

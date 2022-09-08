@@ -118,11 +118,7 @@ export class ECS {
 
   public removeSystem(system: System): void {
     for (const [eventKey, cb] of this.listenersBySystem.get(system) ?? []) {
-      console.log(
-        "deleteing listener: ",
-        eventKey,
-        this.eventBus.removeListener(eventKey, cb)
-      );
+      this.eventBus.removeListener(eventKey, cb);
     }
     this.listenersBySystem.delete(system);
 
