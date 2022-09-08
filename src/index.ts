@@ -4,6 +4,8 @@ import { createInputEventObservable } from "./mouseEventStream";
 // console.clear();
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement;
+canvas.width = window.innerWidth - 16;
+canvas.height = window.innerHeight - 16;
 const ctx = canvas.getContext("2d")!;
 
 class Positionable extends Component {
@@ -627,6 +629,7 @@ ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
+
 ecs.addSystem(new MovementSystem(), ["frame"]);
 
 ecs.addSystem(new RenderSystem(ctx), "frame");
