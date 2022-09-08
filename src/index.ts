@@ -1,8 +1,21 @@
-import { Transform } from './components/index';
-import { ECS} from "./ECS";
+import { Transform } from "./components/index";
+import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
-import { createBackground, createRect } from './init/utils';
-import { DoubleClickHandlerSystem, KeyboardInputSystem, MouseScrollSystem, MouseStartSystem, MovementSystem, RenderDebugSystem, RenderDragSelectionSystem, RenderDragSystem, RenderSystem, SelectionByAreaSystem, SelectionSystem, ZoomSystem } from "./systems";
+import { createBackground, createRect } from "./init/utils";
+import {
+  DoubleClickHandlerSystem,
+  KeyboardInputSystem,
+  MouseScrollSystem,
+  MouseStartSystem,
+  MovementSystem,
+  RenderDebugSystem,
+  RenderDragSelectionSystem,
+  RenderDragSystem,
+  RenderSystem,
+  SelectionByAreaSystem,
+  SelectionSystem,
+  ZoomSystem,
+} from "./systems";
 
 // console.clear();
 
@@ -28,7 +41,7 @@ ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
+// ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
 
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
