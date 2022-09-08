@@ -13,7 +13,8 @@ import {
   Drawable,
   Dragging,
   Scrollable,
-} from "./../components/index";
+  Animatable,
+} from "./../components";
 import { System, Entity } from "../ECS";
 import { TRANSFORM_ELEMENT } from "../constants";
 
@@ -146,6 +147,12 @@ export class MouseStartSystem extends System {
 
         if (entity !== undefined) {
           this.ecs.enqueueEvent({ type: "selectEntity", entity });
+        } else {
+          this.ecs.enqueueEvent({
+            type: "animationStart",
+            x: event.x,
+            y: event.y,
+          });
         }
         break;
       }
@@ -558,5 +565,51 @@ export class RenderDragSelectionSystem extends System {
       this.ctx.fillRect(position.x, position.y, box.w, box.h);
     }
     this.ctx.restore();
+  }
+}
+
+export class AnimationStartSystem extends System {
+  componentsRequired = new Set([Selected, Positionable]);
+  update(entities: Set<Entity>, event) {
+    const t = Date.now();
+
+    for (const entity of entities) {
+      const comps = this.ecs.getComponents(entity);
+      const position = comps.get(Positionable);
+      this.ecs.addComponent(
+        entity,
+        new Animatable(position.x, position.y, t, event.x, event.y, t + 2000)
+      ); // overwrites existing
+    }
+    this.ctx.restore();
+  }
+}
+
+export class AnimationSystem extends System {
+  componentsRequired = new Set([Animatable, Positionable]);
+  update(entities: Set<Entity>) {
+    const t = Date.now();
+    let allAnimationDone = true;
+
+    for (const entity of entities) {
+      allAnimationDone = false;
+
+      const comps = this.ecs.getComponents(entity);
+      const animation = comps.get(Animatable);
+      const position = comps.get(Positionable);
+
+      const { fromT, fromX, fromY, toT, toX, toY } = animation;
+      if (t >= toT) {
+        position.x = toX;
+        position.y = toY;
+
+        this.ecs.removeComponent(entity, Animatable);
+        continue;
+      }
+
+      const proportionDone = (t - fromT) / (toT - fromT);
+      position.x = fromX + proportionDone * (toX - fromX);
+      position.y = fromY + proportionDone * (toY - fromY);
+    }
   }
 }
