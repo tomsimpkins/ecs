@@ -28,6 +28,8 @@ ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
+ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
+
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
 
