@@ -1,7 +1,7 @@
-import { ECS } from './../ECS';
 import { createRect } from './../init/utils';
 import { Zoomable, Selected, Velocityable, Positionable, Clickable, BoundingBoxable, Transform, SelectionDragBox, Pannable, Selectable, Drawable, Dragging, Scrollable } from './../components/index';
 import { System, Entity } from "../ECS";
+import { TRANSFORM_ELEMENT } from '../constants';
 
 export class KeyboardInputSystem extends System {
     componentsRequired = new Set([Selected, Velocityable]); // you only move things which are selected and moveable
@@ -52,10 +52,10 @@ export class KeyboardInputSystem extends System {
   
     componentsRequired = new Set([Positionable]);
     update(entities: Set<Entity>, event) {
-        const TRANSFORM = this.ecs.addEntity();
+        
 
       const transform = this.ecs
-        .getComponents(TRANSFORM)
+        .getComponents(TRANSFORM_ELEMENT)
         .get(Transform)
         .matrix.inverse();
   
@@ -122,10 +122,10 @@ export class KeyboardInputSystem extends System {
   
     componentsRequired = new Set([Clickable, Positionable, BoundingBoxable]);
     update(entities: Set<Entity>, event) {
-        const TRANSFORM = this.ecs.addEntity();
+        
 
       const transformMatrix = this.ecs
-        .getComponents(TRANSFORM)
+        .getComponents(TRANSFORM_ELEMENT)
         .get(Transform)
         .matrix.inverse();
   
@@ -197,10 +197,10 @@ export class KeyboardInputSystem extends System {
     componentsRequired = new Set([Zoomable]);
     update(entities: Set<Entity>, event) {
 
-        const TRANSFORM = this.ecs.addEntity();
+        
 
       for (const entity of entities) {
-        const transform = this.ecs.getComponents(TRANSFORM).get(Transform);
+        const transform = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform);
         const { d } = event;
         const scaleFactor = d <= 0 ? 1.2 : 1 / 1.2;
   
@@ -217,7 +217,7 @@ export class KeyboardInputSystem extends System {
   
     componentsRequired = new Set([Dragging, Positionable]);
     update(entities: Set<Entity>, event) {
-    const TRANSFORM = this.ecs.addEntity();
+    
 
       if (event.type === "dragmove") {
         for (const entity of entities) {
@@ -228,7 +228,7 @@ export class KeyboardInputSystem extends System {
           const dragPosition = this.ecs.getComponents(dragEl).get(Positionable);
   
           const mouseToCanvas = this.ecs
-            .getComponents(TRANSFORM)
+            .getComponents(TRANSFORM_ELEMENT)
             .get(Transform)
             .matrix.inverse();
   
@@ -245,7 +245,7 @@ export class KeyboardInputSystem extends System {
             .get(Positionable);
   
           const mouseToCanvas = this.ecs
-            .getComponents(TRANSFORM)
+            .getComponents(TRANSFORM_ELEMENT)
             .get(Transform)
             .matrix.inverse();
   
@@ -312,7 +312,7 @@ export class KeyboardInputSystem extends System {
     }
     componentsRequired = new Set([Pannable]);
     update(entities: Set<Entity>, event) {
-        const TRANSFORM = this.ecs.addEntity();
+        
 
       if (entities.size !== 1) {
         console.warn("exited pan due to multiple pannable elements");
@@ -322,7 +322,7 @@ export class KeyboardInputSystem extends System {
       const [entity] = [...entities];
       const comps = this.ecs.getComponents(entity);
       const pan = comps.get(Pannable);
-      const transform = this.ecs.getComponents(TRANSFORM).get(Transform);
+      const transform = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform);
       const currentMatrix = transform.matrix;
   
       currentMatrix.e = pan.x + event.dx;
@@ -403,11 +403,11 @@ export class KeyboardInputSystem extends System {
         }
       }
 
-      const TRANSFORM = this.ecs.addEntity();
+      
 
   
       const mouseToCanvas = this.ecs
-        .getComponents(TRANSFORM)
+        .getComponents(TRANSFORM_ELEMENT)
         .get(Transform)
         .matrix.inverse();
       const hits = this.entityHitTest(
@@ -440,22 +440,14 @@ export class KeyboardInputSystem extends System {
     constructor(
         public canvas: HTMLCanvasElement, 
         public ctx: CanvasRenderingContext2D, 
-        // public testEcs: ECS
     ) {
       super();
     }
 
     componentsRequired = new Set([Positionable, Drawable, BoundingBoxable]);
     
-    update(entities: Set<Entity>) {
-    const TRANSFORM = this.ecs.addEntity();
-    console.log({
-        ecs: this.ecs,
-        TRANSFORM,
-        getComps: this.ecs.getComponents(TRANSFORM),
-        getTransform: this.ecs.getComponents(TRANSFORM).get(Transform)
-    })
 
+    update(entities: Set<Entity>) {
       this.ctx.save();
       this.ctx.resetTransform();
       this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
@@ -465,7 +457,7 @@ export class KeyboardInputSystem extends System {
       this.ctx.restore();
   
       this.ctx.save();
-      this.ctx.setTransform(this.ecs.getComponents(TRANSFORM).get(Transform).matrix);
+      this.ctx.setTransform(this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix);
       for (const entity of entities) {
         const comps = this.ecs.getComponents(entity);
         const position = comps.get(Positionable);
@@ -488,8 +480,8 @@ export class KeyboardInputSystem extends System {
   
     componentsRequired = new Set([Pannable]);
     update(entities: Set<Entity>) {
-      const TRANSFORM = this.ecs.addEntity();
-      const matrix = this.ecs.getComponents(TRANSFORM).get(Transform).matrix;
+      
+      const matrix = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix;
   
       for (const entity of entities) {
         const comps = this.ecs.getComponents(entity);
@@ -519,10 +511,10 @@ export class KeyboardInputSystem extends System {
       Drawable,
     ]);
     update(entities: Set<Entity>) {
-    const TRANSFORM = this.ecs.addEntity();
+    
 
       this.ctx.save();
-      this.ctx.setTransform(this.ecs.getComponents(TRANSFORM).get(Transform).matrix);
+      this.ctx.setTransform(this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix);
       for (const entity of entities) {
         const comps = this.ecs.getComponents(entity);
         const box = comps.get(BoundingBoxable);

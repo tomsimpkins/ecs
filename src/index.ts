@@ -13,13 +13,12 @@ const ctx = canvas.getContext("2d")!;
 
 const ecs = new ECS();
 
+const TRANSFORM = ecs.addEntity(); // corresponds to TRANSFORM_ELEMENT in constants
+ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
 createRect(ecs, 60, 10);
 createRect(ecs, 80, 80);
 createRect(ecs, 50, 40);
 createBackground(ecs);
-
-const TRANSFORM = ecs.addEntity();
-ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
 
 // add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KeyboardInputSystem(), ["keyboard"]);
@@ -34,7 +33,7 @@ ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
 
 ecs.addSystem(new MovementSystem(), ["frame"]);
 
-ecs.addSystem(new RenderSystem(canvas, ctx, ecs), "frame");
+ecs.addSystem(new RenderSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
 ecs.addSystem(new RenderDebugSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSelectionSystem(ctx), "frame");
