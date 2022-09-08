@@ -18,6 +18,12 @@ type PictographOptions = {
   y: number;
 };
 
+// thing we're drawing in total - whole viz
+// will return columns, axes etc
+// we need to break this down into primitives, this is what the compileFunctions are for
+
+// A system specific to building this layout will call this
+// will query nodes to get buckets
 export const pictograph = (o: PictographOptions): HighLevelShape[] => {
   return [];
 };
@@ -26,6 +32,7 @@ export const compileColumn = (o: ColumnShape): HighLevelShape[] => {
   return [];
 };
 
+// then call this in all the shapes in the pictograph
 export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
   const result: LowLevelShape[] = [];
   for (const shape of shapes) {
@@ -44,6 +51,7 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
   return result;
 };
 
+// called on low-level shapes
 export const addShapeToECS = (shapes: LowLevelShape[], ecs: ECS): void => {
   for (const shape of shapes) {
     const entity = ecs.addEntity();
@@ -61,6 +69,7 @@ export const addShapeToECS = (shapes: LowLevelShape[], ecs: ECS): void => {
   }
 };
 
+// the real render system (new system) will call this
 export const drawShapeToCanvas = (
   shape: LowLevelShape,
   ctx: CanvasRenderingContext2D

@@ -40,8 +40,13 @@ export const createColumn = (
   const itemsPerRow = Math.floor(
     dimension.width / (RECT_WIDTH + COLUMN_PADDING)
   );
+
   // TODO: separate node pos in column from node absolute position
   contents.forEach((_node, index) => {
+    // TODO: start by giving pictograph an x, y as an absolute
+    // this will be used as the basis
+    // pictograph will know from x, y, height, width, what to do
+    // pictograph has bucket information too
     const { x, y } = positionColumnNode(
       index,
       itemsPerRow,
