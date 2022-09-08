@@ -6,7 +6,7 @@ import {
   scan,
   mergeMap,
   buffer,
-  throttle
+  throttle,
 } from "rxjs/operators"; // iterable construct - iterable in that it represents a collection which may be infinite
 
 const createClickDragStateMachine = () => {
@@ -42,8 +42,8 @@ const createClickDragStateMachine = () => {
                 type: "dragstart",
                 button: button!,
                 x: downCoordinate![0],
-                y: downCoordinate![1]
-              }
+                y: downCoordinate![1],
+              },
             ];
           } else {
             return [stateMachine["down"]];
@@ -53,7 +53,7 @@ const createClickDragStateMachine = () => {
           downCoordinate = undefined;
           return [
             stateMachine["up"],
-            { type: "click", x: e.clientX, y: e.clientY }
+            { type: "click", x: e.clientX, y: e.clientY },
           ];
         }
         default: {
@@ -72,8 +72,8 @@ const createClickDragStateMachine = () => {
               sx: e.clientX,
               sy: e.clientY,
               dx: e.clientX - sx,
-              dy: e.clientY - sy
-            }
+              dy: e.clientY - sy,
+            },
           ];
         }
         case "mouseup": {
@@ -87,15 +87,15 @@ const createClickDragStateMachine = () => {
               x: e.clientX,
               y: e.clientY,
               dx: e.clientX - sx,
-              dy: e.clientY - sy
-            }
+              dy: e.clientY - sy,
+            },
           ];
         }
         default: {
           return [stateMachine["dragging"]];
         }
       }
-    }
+    },
   };
 
   return stateMachine["up"];
@@ -124,7 +124,7 @@ export const createDragClickObservable = (element: HTMLElement | Document) => {
     buffer(
       raw.pipe(
         throttle((v) => (v.type === "click" ? interval(150) : of(1)), {
-          trailing: true
+          trailing: true,
         })
       )
     ),
@@ -134,7 +134,7 @@ export const createDragClickObservable = (element: HTMLElement | Document) => {
         ? of({
             type: "doubleClick",
             x: v[v.length - 1].x,
-            y: v[v.length - 1].y
+            y: v[v.length - 1].y,
           })
         : from(v)
     )
@@ -149,13 +149,9 @@ export const createWheelObservable = (element: HTMLElement | Document) => {
       type: "wheel",
       d: event.deltaY,
       x: event.clientX,
-      y: event.clientY
+      y: event.clientY,
     }))
   );
 
   return wheelEvents;
 };
-
-
-
-
