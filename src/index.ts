@@ -34,11 +34,14 @@ createRect(ecs, 80, 80);
 createRect(ecs, 50, 40);
 createBackground(ecs);
 
+const columnContents = [1, 2, 3, 4, 5, 6];
+
 createColumn(
   ecs,
   { x: 250, y: 100 },
   { height: 300, width: 60 },
-  "Test column"
+  "Test column",
+  columnContents
 );
 
 // add all the systems, which subscribe to the appropriate events

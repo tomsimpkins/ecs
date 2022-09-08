@@ -1,3 +1,4 @@
+import { RECT_WIDTH, COLUMN_PADDING } from "./../constants";
 import {
   Positionable,
   BoundingBoxable,
@@ -6,6 +7,8 @@ import {
   Nameable,
 } from "./../components/index";
 import { ECS } from "../ECS";
+import { createRect } from "../init/utils";
+import { positionColumnNode } from "./positionColumnNode";
 
 export const createColumn = (
   ecs: ECS,
@@ -14,10 +17,11 @@ export const createColumn = (
     y: number;
   },
   dimension: {
-    height: number;
     width: number;
+    height: number;
   },
-  name: string
+  name: string,
+  contents: number[]
 ) => {
   const colPosition = new Positionable(position.x, position.y, 0);
   const box = new BoundingBoxable(dimension.width, dimension.height);
@@ -32,4 +36,25 @@ export const createColumn = (
   ecs.addComponent(column, draw);
   ecs.addComponent(column, transparent);
   ecs.addComponent(column, nameable);
+
+  const itemsPerRow = Math.floor(
+    dimension.width / (RECT_WIDTH + COLUMN_PADDING)
+  );
+  // TODO: separate node pos in column from node absolute position
+  contents.forEach((_node, index) => {
+    const { x, y } = positionColumnNode(
+      index,
+      itemsPerRow,
+      position.x,
+      position.y
+    );
+
+    createRect(ecs, x, y);
+  });
+
+  // TODO: contents (nodes? rectangles?) - this logic should be handled elsewhere
+  // TODO: higher-level building of columns
+
+  // handling moving a node into a column
+  // handling moving a node outside of columns
 };
