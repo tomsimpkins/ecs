@@ -24,7 +24,7 @@ export class EventBus {
     return true;
   };
 
-  enqueueEvent = (event: ECSEvent): void => {
+  enqueueEvent = <T extends ECSEvent>(event: T): void => {
     this.eventQueue.push(event);
   };
 
