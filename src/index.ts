@@ -1,5 +1,5 @@
 import { Component, ECS, System, Entity } from "./ECS";
-import { createInputEventObservable } from "./mouseEventStream";
+import { createInputEventObservable } from "./eventStreams";
 
 // console.clear();
 
@@ -90,7 +90,7 @@ const TRANSFORM = ecs.addEntity();
 ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
 
 class KayboardInputSystem extends System {
-  componentsRequired = new Set([Selected, Velocityable]);
+  componentsRequired = new Set([Selected, Velocityable]); // you only move things which are selected and moveable
 
   update(entities: Set<Entity>, event) {
     const keys = event.keys;
@@ -618,6 +618,7 @@ class RenderDragSelectionSystem extends System {
   }
 }
 
+// add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KayboardInputSystem(), ["keyboard"]);
 ecs.addSystem(new MouseStartSystem(canvas, ctx), ["click", "dragstart"]);
 ecs.addSystem(new MouseScrollSystem(), ["wheel"]);
@@ -640,6 +641,7 @@ const go = () => {
 
   ecs.update({ type: "init" });
   obs.subscribe((ev) => {
+    // clear the canvas, then fire the events
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);

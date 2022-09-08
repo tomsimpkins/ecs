@@ -7,7 +7,7 @@ import {
   mergeMap,
   buffer,
   throttle
-} from "rxjs/operators";
+} from "rxjs/operators"; // iterable construct - iterable in that it represents a collection which may be infinite
 
 const createClickDragStateMachine = () => {
   const dist = (xy: [number, number], xy2: [number, number]): number => {
@@ -101,7 +101,7 @@ const createClickDragStateMachine = () => {
   return stateMachine["up"];
 };
 
-const createDragClickObservable = (element: HTMLElement | Document) => {
+export const createDragClickObservable = (element: HTMLElement | Document) => {
   const downEvents = fromEvent<MouseEvent>(element, "mousedown");
   const moveEvents = fromEvent<MouseEvent>(element, "mousemove").pipe(
     throttleTime(16)
@@ -143,7 +143,7 @@ const createDragClickObservable = (element: HTMLElement | Document) => {
   return withDoubleClicks;
 };
 
-const createWheelObservable = (element: HTMLElement | Document) => {
+export const createWheelObservable = (element: HTMLElement | Document) => {
   const wheelEvents = fromEvent<WheelEvent>(element, "wheel").pipe(
     map((event) => ({
       type: "wheel",
@@ -156,43 +156,6 @@ const createWheelObservable = (element: HTMLElement | Document) => {
   return wheelEvents;
 };
 
-const createKeyboardObservable = (element: HTMLElement | Document) => {
-  const allowedKeys = new Set([
-    "ArrowRight",
-    "ArrowLeft",
-    "ArrowUp",
-    "ArrowDown"
-  ]);
 
-  const keyDowns = fromEvent<KeyboardEvent>(element, "keydown");
-  const keyUps = fromEvent<KeyboardEvent>(element, "keyup");
 
-  return merge(keyDowns, keyUps).pipe(
-    filter((k) => allowedKeys.has(k.key)),
-    scan((acc, ev) => {
-      const nextAcc = new Set(acc);
 
-      switch (ev.type) {
-        case "keydown": {
-          nextAcc.add(ev.key);
-          break;
-        }
-        case "keyup": {
-          nextAcc.delete(ev.key);
-          break;
-        }
-      }
-
-      return nextAcc;
-    }, new Set()),
-    map((v) => ({ type: "keyboard", keys: v }))
-  );
-};
-
-export const createInputEventObservable = (element: HTMLElement | Document) => {
-  return merge(
-    createDragClickObservable(element),
-    createWheelObservable(element),
-    createKeyboardObservable(element)
-  );
-};

@@ -1,6 +1,7 @@
 type ECSEvent = { type: string };
 type Listener = (event: ECSEvent) => void;
 
+// every event goes via the event bus
 export class EventBus {
   private eventQueue: ECSEvent[] = [];
 
