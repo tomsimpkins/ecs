@@ -1,7 +1,12 @@
 import { EventBus } from "./eventBus";
 
+// entity is an identifier of a 'thing' in an app
 export type Entity = number;
+// components are attached to thing
 export abstract class Component {}
+// contains all your application logic
+// applies to entities based on their components e.g. those which have position and velocity for movement
+// this means you don't care what the entities are as a whole, just the traits they have
 export abstract class System {
   public abstract componentsRequired: Set<ComponentClass>;
   public abstract update(
@@ -14,6 +19,8 @@ export abstract class System {
     this.ecs.connectSystemToEvent(event, this);
   };
 }
+
+// this is a simulation - it does things based on logic based on events
 
 type ComponentClass<T extends Component = Component> = new (
   ...args: any[]
@@ -131,10 +138,11 @@ export class ECS {
    * for removal.
    */
   public update(event): void {
+    // enqueue then dequeue event
     this.eventBus.enqueueEvent(event);
-    while (this.eventBus.dequeueEvent()) {}
+    while (this.eventBus.dequeueEvent()) {} // dequeue event triggers logic
 
-    this.eventBus.enqueueEvent({ type: "frame" });
+    this.eventBus.enqueueEvent({ type: "frame" }); // system has settled, so draw
     this.eventBus.dequeueEvent();
 
     // Update all systems. (Later, we'll add a way to specify the
