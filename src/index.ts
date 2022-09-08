@@ -1,4 +1,5 @@
 import { Transform } from "./components/index";
+import { createColumn } from "./createEntity/createColumn";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
 import { createBackground, createRect } from "./init/utils";
@@ -32,6 +33,13 @@ createRect(ecs, 60, 10);
 createRect(ecs, 80, 80);
 createRect(ecs, 50, 40);
 createBackground(ecs);
+
+createColumn(
+  ecs,
+  { x: 250, y: 100 },
+  { height: 300, width: 60 },
+  "Test column"
+);
 
 // add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KeyboardInputSystem(), ["keyboard"]);

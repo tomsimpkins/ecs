@@ -13,6 +13,8 @@ import {
   Drawable,
   Dragging,
   Scrollable,
+  Transparent,
+  Nameable,
 } from "./../components/index";
 import { System, Entity } from "../ECS";
 import { TRANSFORM_ELEMENT } from "../constants";
@@ -452,6 +454,7 @@ export class RenderSystem extends System {
   componentsRequired = new Set([Positionable, Drawable, BoundingBoxable]);
 
   update(entities: Set<Entity>) {
+    // draw page
     this.ctx.save();
     this.ctx.resetTransform();
     this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
@@ -464,13 +467,32 @@ export class RenderSystem extends System {
     this.ctx.setTransform(
       this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix
     );
+
+    // draw entities
     for (const entity of entities) {
       const comps = this.ecs.getComponents(entity);
       const position = comps.get(Positionable);
       const box = comps.get(BoundingBoxable);
 
-      this.ctx.fillStyle = comps.has(Selected) ? "red" : "black";
-      this.ctx.fillRect(position.x, position.y, box.w, box.h);
+      if (comps.has(Transparent)) {
+        this.ctx.strokeRect(position.x, position.y, box.w, box.h);
+      } else {
+        this.ctx.fillStyle = comps.has(Selected) ? "red" : "black";
+        this.ctx.fillRect(position.x, position.y, box.w, box.h);
+      }
+
+      if (comps.has(Nameable)) {
+        const textCoordinates = {
+          x: position.x + box.w / 4,
+          y: position.y + box.h + 20, // make text appear below box
+        };
+        this.ctx.font = "12px Arial";
+        this.ctx.fillText(
+          comps.get(Nameable).name,
+          textCoordinates.x,
+          textCoordinates.y
+        );
+      }
     }
     this.ctx.restore();
   }

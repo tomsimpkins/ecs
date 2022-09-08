@@ -21,6 +21,13 @@ export class Drawable extends Component {}
 export class Selectable extends Component {}
 export class Selected extends Component {}
 export class Clickable extends Component {}
+export class Transparent extends Component {}
+
+export class Nameable extends Component {
+  constructor(public name: string) {
+    super();
+  }
+}
 
 export class Dragging extends Component {
   constructor(public entityRef: Entity) {
