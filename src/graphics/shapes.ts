@@ -89,7 +89,14 @@ export const icicle = (): HighLevelShape[] => {
   while (queue.length && result.length < 100) {
     const { depth, x, y, w } = queue.shift()!;
 
-    result.push({ type: "rect", x: x, y: y, w: w, h: h });
+    result.push({
+      type: "rect",
+      x: x,
+      y: y,
+      w: w,
+      h: h,
+      nodeReference: result.length,
+    });
 
     const childrenCount = (Math.random() * maxChildren) | 0;
     const widthPerChild = (w - (childrenCount - 1) * xGap) / childrenCount;
@@ -142,23 +149,11 @@ export const addShapeToECS = (
   for (const shape of shapes) {
     const existingEntity = lookup[shape.nodeReference!];
     let entity;
+    let existingPosition;
 
     if (existingEntity !== undefined) {
       entity = existingEntity;
-      const existingPosition = ecs.getComponents(entity).get(Positionable);
-
-      ecs.addComponent(
-        entity,
-        new Animated(
-          existingPosition.x,
-          existingPosition.y,
-          Date.now(),
-          shape.x,
-          shape.y,
-          Date.now() + 500
-        )
-      );
-      continue;
+      existingPosition = ecs.getComponents(entity).get(Positionable);
     } else {
       entity = ecs.addEntity();
       ecs.addComponent(entity, new Layouted(shape.nodeReference!));
@@ -166,7 +161,22 @@ export const addShapeToECS = (
 
     switch (shape.type) {
       case "rect": {
-        ecs.addComponent(entity, new Positionable(shape.x, shape.y, 1));
+        if (existingPosition) {
+          ecs.addComponent(
+            entity,
+            new Animated(
+              existingPosition.x,
+              existingPosition.y,
+              Date.now(),
+              shape.x,
+              shape.y,
+              Date.now() + 500
+            )
+          );
+        } else {
+          ecs.addComponent(entity, new Positionable(shape.x, shape.y, 1));
+        }
+
         ecs.addComponent(entity, new BoundingBoxable(shape.w, shape.h));
         ecs.addComponent(entity, new Drawable(/* shape */));
         ecs.addComponent(entity, new Clickable());

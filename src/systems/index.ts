@@ -573,7 +573,7 @@ export class RenderDragSelectionSystem extends System {
 export class LayoutSystem extends System {
   componentsRequired = new Set([Layouted]);
   update(entities: Set<Entity>, event) {
-    addShapeToECS(compileShapes(icicle()), this.ecs, new Set());
+    addShapeToECS(compileShapes(icicle()), this.ecs, entities);
     // if (event.layout === "row") {
     //   addShapeToECS(compileShapes(row()), this.ecs, entities);
     // } else {
