@@ -45,7 +45,7 @@ export const pictograph = (o: PictographOptions): HighLevelShape[] => {
   const { buckets, itemHeight, itemWidth, width } = o;
   const columnWidth = width / buckets.length;
   const axes: HighLevelShape[] = [
-    { type: "rect", x: o.x, y: o.y - 6, w: width, h: 2 },
+    { type: "rect", x: o.x, y: o.y, w: width, h: 2 },
   ];
 
   return buckets
@@ -59,7 +59,7 @@ export const pictograph = (o: PictographOptions): HighLevelShape[] => {
         itemWidth,
         bucket,
       },
-      { type: "rect", x: o.x + i * columnWidth - 6, y: o.y, w: 2, h: 200 },
+      { type: "rect", x: o.x + i * columnWidth, y: o.y, w: 2, h: 200 },
       { type: "text", x: o.x + i * columnWidth, y: o.y - 14, text: bucket.key },
     ])
     .concat(axes);
@@ -81,8 +81,8 @@ export const compileColumn = (o: ColumnShape): HighLevelShape[] => {
 
     result.push({
       type: "rect",
-      x: o.x + r * (itemWidth + 2),
-      y: o.y + c * (itemWidth + 2),
+      x: 8 + o.x + r * (itemWidth + 2),
+      y: 8 + o.y + c * (itemWidth + 2),
       w: itemWidth,
       h: itemHeight,
       nodeReference: bucket.itemIndices[i],

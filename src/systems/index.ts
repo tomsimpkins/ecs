@@ -644,7 +644,7 @@ export class LayoutSystem extends System {
           x: 200,
           y: 200,
           buckets: groupByBuckets("department"),
-          width: 1500,
+          width: 1800,
         })
       ),
       this.ecs,
