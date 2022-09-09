@@ -1,3 +1,4 @@
+import { AnimationSystem, LayoutSystem } from "./systems/index";
 import { Transform } from "./components/index";
 import { generateColumns } from "./createEntity/generateColumns";
 import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
@@ -53,12 +54,13 @@ ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-// ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
-
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
 
+ecs.addSystem(new LayoutSystem(), ["drawLayout"]);
+
 ecs.addSystem(new MovementSystem(), ["frame"]);
+ecs.addSystem(new AnimationSystem(), ["frame"]);
 
 ecs.addSystem(new RenderSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
@@ -85,9 +87,10 @@ const go = () => {
   });
 };
 
-// console.log({testBucketGroups})
-// console.log({salesManagerBuckets})
-console.log({ testBucketGroups, names });
-// console.log(getBucketCountsFromProperty(filterByPropertyKey("role")))
-
 go();
+
+let layout = "column";
+setInterval(() => {
+  ecs.update({ type: "drawLayout", layout: layout });
+  layout = layout === "column" ? "row" : "column";
+}, 2000);

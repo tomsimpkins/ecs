@@ -1,18 +1,26 @@
-import { BoundingBoxable, Drawable, Positionable } from "./../components/index";
-import { ECS } from "./../ECS";
+import {
+  Animated,
+  BoundingBoxable,
+  Clickable,
+  Drawable,
+  Layouted,
+  Positionable,
+  Selectable,
+} from "./../components";
+import { ECS, Entity } from "./../ECS";
 
 // type BaseShape = { type: string };
 type ColumnShape = { type: "column"; x: number; y: number; width: number };
 type RectShape = { type: "rect"; x: number; y: number; w: number; h: number };
 type GroupContainer = { type: "group"; transforms: [] };
 
-type HighLevelShape = RectShape | GroupContainer | ColumnShape;
+type HighLevelShape = LowLevelShape | GroupContainer | ColumnShape;
 
 type NodeReference = { nodeReference?: number };
 type LowLevelShape = RectShape & NodeReference;
 
 type PictographOptions = {
-  buckets: { key: string; itemIds: number[] }[];
+  buckets: { key: string; itemIndices: number[] }[];
   width: number;
   x: number;
   y: number;
@@ -87,7 +95,14 @@ export const icicle = (): HighLevelShape[] => {
   while (queue.length && result.length < 100) {
     const { depth, x, y, w } = queue.shift()!;
 
-    result.push({ type: "rect", x: x, y: y, w: w, h: h });
+    result.push({
+      type: "rect",
+      x: x,
+      y: y,
+      w: w,
+      h: h,
+      nodeReference: result.length,
+    });
 
     const childrenCount = (Math.random() * maxChildren) | 0;
     const widthPerChild = (w - (childrenCount - 1) * xGap) / childrenCount;
@@ -126,21 +141,59 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
   return result;
 };
 
+<<<<<<< HEAD
 // called on low-level shapes
 export const addShapeToECS = (shapes: LowLevelShape[], ecs: ECS): void => {
+=======
+export const addShapeToECS = (
+  shapes: LowLevelShape[],
+  ecs: ECS,
+  existingNodeReferences: Set<Entity>
+): void => {
+  const lookup = [];
+  for (const entity of existingNodeReferences) {
+    const existing = ecs.getComponents(entity).get(Layouted);
+    lookup[existing.ref] = entity;
+  }
+
+>>>>>>> origin/master
   for (const shape of shapes) {
-    const entity = ecs.addEntity();
-    switch (shape.type) {
-      case "rect": {
-        ecs.addComponent(entity, new Positionable(shape.x, shape.y, 1));
-        ecs.addComponent(entity, new BoundingBoxable(shape.w, shape.h));
-        ecs.addComponent(entity, new Drawable(/* shape */));
-      }
+    const existingEntity = lookup[shape.nodeReference!];
+    let entity;
+    let existingPosition;
+
+    if (existingEntity !== undefined) {
+      entity = existingEntity;
+      existingPosition = ecs.getComponents(entity).get(Positionable);
+    } else {
+      entity = ecs.addEntity();
+      ecs.addComponent(entity, new Layouted(shape.nodeReference!));
     }
 
-    // if (shape.nodeReference !== undefined) {
-    //   ecs.addComponent(entity, new NodeReference(shape.nodeReference));
-    // }
+    switch (shape.type) {
+      case "rect": {
+        if (existingPosition) {
+          ecs.addComponent(
+            entity,
+            new Animated(
+              existingPosition.x,
+              existingPosition.y,
+              Date.now(),
+              shape.x,
+              shape.y,
+              Date.now() + 500
+            )
+          );
+        } else {
+          ecs.addComponent(entity, new Positionable(shape.x, shape.y, 1));
+        }
+
+        ecs.addComponent(entity, new BoundingBoxable(shape.w, shape.h));
+        ecs.addComponent(entity, new Drawable(/* shape */));
+        ecs.addComponent(entity, new Clickable());
+        ecs.addComponent(entity, new Selectable());
+      }
+    }
   }
 };
 
