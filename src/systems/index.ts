@@ -1,3 +1,10 @@
+import {
+  addShapeToECS,
+  column,
+  compileShapes,
+  icicle,
+  row,
+} from "./../graphics/shapes";
 import { createRect } from "./../init/utils";
 import {
   Zoomable,
@@ -13,6 +20,8 @@ import {
   Drawable,
   Dragging,
   Scrollable,
+  Layouted,
+  Animated,
 } from "./../components/index";
 import { System, Entity } from "../ECS";
 import { TRANSFORM_ELEMENT } from "../constants";
@@ -558,6 +567,18 @@ export class RenderDragSelectionSystem extends System {
       this.ctx.fillRect(position.x, position.y, box.w, box.h);
     }
     this.ctx.restore();
+  }
+}
+
+export class LayoutSystem extends System {
+  componentsRequired = new Set([Layouted]);
+  update(entities: Set<Entity>, event) {
+    addShapeToECS(compileShapes(icicle()), this.ecs, new Set());
+    // if (event.layout === "row") {
+    //   addShapeToECS(compileShapes(row()), this.ecs, entities);
+    // } else {
+    //   addShapeToECS(compileShapes(column()), this.ecs, entities);
+    // }
   }
 }
 

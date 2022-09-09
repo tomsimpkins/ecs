@@ -1,5 +1,6 @@
+import { AnimationSystem, LayoutSystem } from "./systems/index";
 import { Transform } from "./components/index";
-import { groupByBuckets, parseIndicesToValues } from './dataLayer/dataQuery';
+// import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
 import { createBackground, createRect } from "./init/utils";
@@ -15,7 +16,7 @@ import {
   RenderSystem,
   SelectionByAreaSystem,
   SelectionSystem,
-  ZoomSystem
+  ZoomSystem,
 } from "./systems";
 
 // console.clear();
@@ -42,12 +43,13 @@ ecs.addSystem(new DoubleClickHandlerSystem(canvas), ["doubleClick"]);
 
 ecs.addSystem(new ZoomSystem(canvas, ctx), ["zoom"]);
 
-// ecs.addSystem(new MoveSelectedSystem(), ["moveSelected"]);
-
 ecs.addSystem(new SelectionByAreaSystem(), ["selectArea"]);
 ecs.addSystem(new SelectionSystem(), ["selectEntity"]);
 
+ecs.addSystem(new LayoutSystem(), ["drawLayout"]);
+
 ecs.addSystem(new MovementSystem(), ["frame"]);
+ecs.addSystem(new AnimationSystem(), ["frame"]);
 
 ecs.addSystem(new RenderSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
@@ -74,15 +76,10 @@ const go = () => {
   });
 };
 
-const testBucketGroups = groupByBuckets("role")
-
-const salesManagerBuckets = testBucketGroups.filter(b=>b.bucketKey === "Sales manager")[0]
-
-const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname")
-
-// console.log({testBucketGroups})
-// console.log({salesManagerBuckets})
-console.log({names})
-// console.log(getBucketCountsFromProperty(filterByPropertyKey("role")))
-
 go();
+
+let layout = "column";
+setInterval(() => {
+  ecs.update({ type: "drawLayout", layout: layout });
+  layout = layout === "column" ? "row" : "column";
+}, 2000);
