@@ -47,3 +47,16 @@ export class Zoomable extends Component {
 }
 
 export class SelectionDragBox extends Component {}
+
+export class Animated extends Component {
+  constructor(
+    public fromX: number,
+    public fromY: number,
+    public fromT: number,
+    public toX: number,
+    public toY: number,
+    public toT: number
+  ) {
+    super();
+  }
+}
