@@ -1,6 +1,6 @@
 import { AnimationSystem, LayoutSystem, RenderSystem2 } from "./systems/index";
 import { Transform } from "./components/index";
-import { generateColumns } from "./createEntity/generateColumns";
+
 import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
