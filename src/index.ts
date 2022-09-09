@@ -1,9 +1,7 @@
-import { AnimationSystem, LayoutSystem, RenderSystem2 } from "./systems/index";
 import { Transform } from "./components/index";
-
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
-import { createBackground, createRect } from "./init/utils";
+import { createBackground } from "./init/utils";
 import {
   DoubleClickHandlerSystem,
   KeyboardInputSystem,
@@ -16,10 +14,9 @@ import {
   RenderSystem,
   SelectionByAreaSystem,
   SelectionSystem,
-  ZoomSystem,
+  ZoomSystem
 } from "./systems";
-
-// console.clear();
+import { AnimationSystem, LayoutSystem, RenderSystem2 } from "./systems/index";
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement;
 canvas.width = window.innerWidth - 16;
@@ -30,9 +27,7 @@ const ecs = new ECS();
 
 const TRANSFORM = ecs.addEntity(); // corresponds to TRANSFORM_ELEMENT in constants
 ecs.addComponent(TRANSFORM, new Transform(new DOMMatrix()));
-createRect(ecs, 60, 10);
-createRect(ecs, 80, 80);
-createRect(ecs, 50, 40);
+
 createBackground(ecs);
 
 // add all the systems, which subscribe to the appropriate events
@@ -79,8 +74,7 @@ const go = () => {
 
 go();
 
-let layout = "column";
-setInterval(() => {
-  ecs.update({ type: "drawLayout", layout: layout });
-  layout = layout === "column" ? "row" : "column";
-}, 2000);
+const multiSelect = document.getElementById("BucketsSelector") as HTMLSelectElement
+multiSelect?.addEventListener("change", function handleClick(event) {
+  ecs.update({ type: "drawLayout", groupBy: event.currentTarget.value });
+})

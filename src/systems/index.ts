@@ -159,6 +159,7 @@ export class MouseStartSystem extends System {
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
 
         if (entity !== undefined) {
+          console.log({entity})
           this.ecs.enqueueEvent({ type: "selectEntity", entity });
         }
         break;
@@ -651,16 +652,10 @@ export class RenderDragSelectionSystem extends System {
   }
 }
 
-let i = 0;
-let groupbys = ["department", "gender", "grade", "area"];
+
 export class LayoutSystem extends System {
   componentsRequired = new Set([Layouted]);
-  update(entities: Set<Entity>) {
-    i++;
-    if (i >= groupbys.length) {
-      i = 0;
-    }
-
+  update(entities: Set<Entity>, event) {
     const ecs = this.ecs;
     const entitiesToRetain: Set<Entity> = new Set();
     for (const entity of entities) {
@@ -680,17 +675,12 @@ export class LayoutSystem extends System {
           x: 10,
           y: 800,
           width: 1800,
-          buckets: groupByBuckets(groupbys[i]),
+          buckets:  groupByBuckets(event.groupBy) ,
         })
       ),
       this.ecs,
       entitiesToRetain
     );
-    // if (event.layout === "row") {
-    //   addShapeToECS(compileShapes(row()), this.ecs, entities);
-    // } else {
-    //   addShapeToECS(compileShapes(column()), this.ecs, entities);
-    // }
   }
 }
 
