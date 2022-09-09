@@ -10,28 +10,86 @@ import {
 import { ECS, Entity } from "./../ECS";
 
 // type BaseShape = { type: string };
-type ColumnShape = { type: "column"; x: number; y: number; width: number };
+type ColumnShape = {
+  type: "column";
+  bucket: { key: string; itemIndices: number[] };
+  itemWidth: number;
+  itemHeight: number;
+  x: number;
+  y: number;
+  width: number;
+};
 type RectShape = { type: "rect"; x: number; y: number; w: number; h: number };
+type TextShape = { type: "text"; text: string; x: number; y: number };
 type GroupContainer = { type: "group"; transforms: [] };
-
 type HighLevelShape = LowLevelShape | GroupContainer | ColumnShape;
-
 type NodeReference = { nodeReference?: number };
-type LowLevelShape = RectShape & NodeReference;
+type LowLevelShape = (RectShape | TextShape) & NodeReference;
 
 type PictographOptions = {
   buckets: { key: string; itemIndices: number[] }[];
+  itemWidth: number;
+  itemHeight: number;
   width: number;
   x: number;
   y: number;
 };
 
+// thing we're drawing in total - whole viz
+// will return columns, axes etc
+// we need to break this down into primitives, this is what the compileFunctions are for
+
+// A system specific to building this layout will call this
+// will query nodes to get buckets
 export const pictograph = (o: PictographOptions): HighLevelShape[] => {
-  return [];
+  const { buckets, itemHeight, itemWidth, width } = o;
+  const columnWidth = 500 / buckets.length;
+  const axes: HighLevelShape[] = [
+    { type: "rect", x: o.x, y: o.y - 6, w: width, h: 2 },
+  ];
+
+  return buckets
+    .flatMap<HighLevelShape>((bucket, i) => [
+      {
+        type: "column",
+        x: o.x + i * columnWidth,
+        y: o.y,
+        width: 100,
+        itemHeight,
+        itemWidth,
+        bucket,
+      },
+      { type: "rect", x: o.x + i * columnWidth - 6, y: o.y, w: 2, h: 200 },
+      { type: "text", x: o.x + i * columnWidth, y: o.y - 14, text: bucket.key },
+    ])
+    .concat(axes);
 };
 
 export const compileColumn = (o: ColumnShape): HighLevelShape[] => {
-  return [];
+  const { bucket, width, itemHeight, itemWidth } = o;
+
+  const itemsPerRow = (width / (itemWidth + 2)) | 0;
+
+  const result: HighLevelShape[] = [];
+  const getRowColumn = (index: number) => [
+    index % itemsPerRow,
+    (index / itemsPerRow) | 0,
+  ];
+
+  for (let i = 0; i < bucket.itemIndices.length; i++) {
+    const [r, c] = getRowColumn(i);
+
+    result.push({
+      type: "rect",
+      x: o.x + r * (itemWidth + 2),
+      y: o.y + c * (itemWidth + 2),
+      w: itemWidth,
+      h: itemHeight,
+      nodeReference: bucket.itemIndices[i],
+    });
+  }
+
+  return result;
 };
 
 export const row = (): HighLevelShape[] => {
@@ -125,9 +183,13 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
         result.push(...compileShapes(compileColumn(shape)));
         break;
       }
+      case "text":
       case "rect": {
         result.push(shape);
         break;
+      }
+      default: {
+        throw new Error(`shape ${shape.type} not recognized`);
       }
     }
   }
@@ -138,16 +200,20 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
 export const addShapeToECS = (
   shapes: LowLevelShape[],
   ecs: ECS,
-  existingNodeReferences: Set<Entity>
+  entitiesWithLayout: Set<Entity>
 ): void => {
-  const lookup = [];
-  for (const entity of existingNodeReferences) {
+  const lookup: number[] = [];
+  for (const entity of entitiesWithLayout) {
     const existing = ecs.getComponents(entity).get(Layouted);
-    lookup[existing.ref] = entity;
+    if (existing.nodeReference === undefined) {
+      continue;
+    }
+    lookup[existing.nodeReference] = entity;
   }
 
   for (const shape of shapes) {
-    const existingEntity = lookup[shape.nodeReference!];
+    const existingEntity = lookup[shape.nodeReference ?? -1];
+
     let entity;
     let existingPosition;
 
@@ -156,7 +222,7 @@ export const addShapeToECS = (
       existingPosition = ecs.getComponents(entity).get(Positionable);
     } else {
       entity = ecs.addEntity();
-      ecs.addComponent(entity, new Layouted(shape.nodeReference!));
+      ecs.addComponent(entity, new Layouted(shape.nodeReference));
     }
 
     switch (shape.type) {
@@ -178,22 +244,40 @@ export const addShapeToECS = (
         }
 
         ecs.addComponent(entity, new BoundingBoxable(shape.w, shape.h));
-        ecs.addComponent(entity, new Drawable(/* shape */));
+        ecs.addComponent(entity, new Drawable(shape));
         ecs.addComponent(entity, new Clickable());
         ecs.addComponent(entity, new Selectable());
+        break;
+      }
+
+      case "text": {
+        ecs.addComponent(entity, new Positionable(shape.x, shape.y, 1));
+        ecs.addComponent(entity, new Drawable(shape));
+        break;
       }
     }
   }
 };
 
+// the real render system (new system) will call this
 export const drawShapeToCanvas = (
+  position: Positionable,
   shape: LowLevelShape,
   ctx: CanvasRenderingContext2D
 ): void => {
   switch (shape.type) {
     case "rect": {
-      ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+      ctx.fillRect(position.x, position.y, shape.w, shape.h);
       break;
+    }
+    case "text": {
+      ctx.font = "12px Arial";
+      ctx.fillText(shape.text, shape.x, shape.y);
+      console.log("fill text");
+      break;
+    }
+    default: {
+      throw new Error("shape not implemented " + shape.type);
     }
   }
 };

@@ -2,7 +2,9 @@ import {
   addShapeToECS,
   column,
   compileShapes,
+  drawShapeToCanvas,
   icicle,
+  pictograph,
   row,
 } from "./../graphics/shapes";
 import { createRect } from "./../init/utils";
@@ -20,6 +22,8 @@ import {
   Drawable,
   Dragging,
   Scrollable,
+  Transparent,
+  Nameable,
   Layouted,
   Animated,
 } from "./../components/index";
@@ -450,6 +454,37 @@ export class MovementSystem extends System {
   }
 }
 
+export class RenderSystem2 extends System {
+  constructor(
+    public canvas: HTMLCanvasElement,
+    public ctx: CanvasRenderingContext2D
+  ) {
+    super();
+  }
+
+  componentsRequired = new Set([Positionable, Drawable]);
+  update(entities: Set<Entity>) {
+    this.ctx.save();
+    this.ctx.setTransform(
+      this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix
+    );
+
+    for (const entity of entities) {
+      const comps = this.ecs.getComponents(entity);
+      const drawable = comps.get(Drawable);
+      if (!drawable.shape) {
+        continue;
+      }
+
+      const position = comps.get(Positionable);
+
+      drawShapeToCanvas(position, drawable.shape, this.ctx);
+    }
+    this.ctx.restore();
+    return;
+  }
+}
+
 export class RenderSystem extends System {
   constructor(
     public canvas: HTMLCanvasElement,
@@ -461,6 +496,7 @@ export class RenderSystem extends System {
   componentsRequired = new Set([Positionable, Drawable, BoundingBoxable]);
 
   update(entities: Set<Entity>) {
+    // draw page
     this.ctx.save();
     this.ctx.resetTransform();
     this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
@@ -473,13 +509,36 @@ export class RenderSystem extends System {
     this.ctx.setTransform(
       this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform).matrix
     );
+
+    // draw entities
     for (const entity of entities) {
       const comps = this.ecs.getComponents(entity);
       const position = comps.get(Positionable);
       const box = comps.get(BoundingBoxable);
+      const drawable = comps.get(Drawable);
+      if (drawable.shape) {
+        continue;
+      }
 
-      this.ctx.fillStyle = comps.has(Selected) ? "red" : "black";
-      this.ctx.fillRect(position.x, position.y, box.w, box.h);
+      if (comps.has(Transparent)) {
+        this.ctx.strokeRect(position.x, position.y, box.w, box.h);
+      } else {
+        this.ctx.fillStyle = comps.has(Selected) ? "red" : "black";
+        this.ctx.fillRect(position.x, position.y, box.w, box.h);
+      }
+
+      if (comps.has(Nameable)) {
+        const textCoordinates = {
+          x: position.x + box.w / 4,
+          y: position.y + box.h + 20, // make text appear below box
+        };
+        this.ctx.font = "12px Arial";
+        this.ctx.fillText(
+          comps.get(Nameable).name,
+          textCoordinates.x,
+          textCoordinates.y
+        );
+      }
     }
     this.ctx.restore();
   }
@@ -570,10 +629,37 @@ export class RenderDragSelectionSystem extends System {
   }
 }
 
+let b = true;
 export class LayoutSystem extends System {
   componentsRequired = new Set([Layouted]);
   update(entities: Set<Entity>, event) {
-    addShapeToECS(compileShapes(icicle()), this.ecs, entities);
+    b = !b;
+    // addShapeToECS(compileShapes(icicle()), this.ecs, entities);
+    addShapeToECS(
+      compileShapes(
+        pictograph({
+          itemHeight: 20,
+          itemWidth: 20,
+          x: 200,
+          y: 200,
+          buckets: b
+            ? [
+                { key: "manchester", itemIndices: [1, 2, 3, 4] },
+                { key: "birmingham", itemIndices: [5, 6, 7, 8, 9, 10] },
+              ]
+            : [
+                {
+                  key: "manchester",
+                  itemIndices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                },
+                { key: "birmingham", itemIndices: [] },
+              ],
+          width: 1000,
+        })
+      ),
+      this.ecs,
+      entities
+    );
     // if (event.layout === "row") {
     //   addShapeToECS(compileShapes(row()), this.ecs, entities);
     // } else {
