@@ -273,6 +273,10 @@ export const drawShapeToCanvas = (
 ): void => {
   switch (shape.type) {
     case "rect": {
+      ctx.fillStyle = `rgb(${shape!.nodeReference / (1505 / 255)}, ${
+        1 - shape!.nodeReference / (1505 / 255)
+      }, ${124})`;
+
       ctx.fillRect(position.x, position.y, shape.w, shape.h);
       break;
     }
