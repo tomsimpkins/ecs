@@ -54,7 +54,7 @@ export const pictograph = (o: PictographOptions): HighLevelShape[] => {
         type: "column",
         x: o.x + i * columnWidth,
         y: o.y,
-        width: 100,
+        width: columnWidth,
         itemHeight,
         itemWidth,
         bucket,
