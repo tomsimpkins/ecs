@@ -43,7 +43,7 @@ type PictographOptions = {
 // will query nodes to get buckets
 export const pictograph = (o: PictographOptions): HighLevelShape[] => {
   const { buckets, itemHeight, itemWidth, width } = o;
-  const columnWidth = 500 / buckets.length;
+  const columnWidth = width / buckets.length;
   const axes: HighLevelShape[] = [
     { type: "rect", x: o.x, y: o.y - 6, w: width, h: 2 },
   ];
@@ -273,7 +273,6 @@ export const drawShapeToCanvas = (
     case "text": {
       ctx.font = "12px Arial";
       ctx.fillText(shape.text, shape.x, shape.y);
-      console.log("fill text");
       break;
     }
     default: {
