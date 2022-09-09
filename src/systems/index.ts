@@ -630,12 +630,27 @@ export class RenderDragSelectionSystem extends System {
   }
 }
 
-let b = true;
+let i = 0;
+let groupbys = ["department", "gender", "grade", "area"];
 export class LayoutSystem extends System {
   componentsRequired = new Set([Layouted]);
-  update(entities: Set<Entity>, event) {
-    b = !b;
-    // addShapeToECS(compileShapes(icicle()), this.ecs, entities);
+  update(entities: Set<Entity>) {
+    i++;
+    if (i >= groupbys.length) {
+      i = 0;
+    }
+
+    const ecs = this.ecs;
+    const entitiesToRetain: Set<Entity> = new Set();
+    for (const entity of entities) {
+      const layout = ecs.getComponents(entity).get(Layouted);
+      if (layout.nodeReference !== undefined) {
+        entitiesToRetain.add(entity);
+      } else {
+        ecs.removeEntity(entity);
+      }
+    }
+
     addShapeToECS(
       compileShapes(
         pictograph({
@@ -643,12 +658,12 @@ export class LayoutSystem extends System {
           itemWidth: 10,
           x: 10,
           y: 800,
-          buckets: groupByBuckets("department"),
           width: 1800,
+          buckets: groupByBuckets(groupbys[i]),
         })
       ),
       this.ecs,
-      entities
+      entitiesToRetain
     );
     // if (event.layout === "row") {
     //   addShapeToECS(compileShapes(row()), this.ecs, entities);
