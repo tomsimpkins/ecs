@@ -641,10 +641,10 @@ export class LayoutSystem extends System {
         pictograph({
           itemHeight: 10,
           itemWidth: 10,
-          x: 200,
-          y: 200,
+          x: 10,
+          y: 800,
           buckets: groupByBuckets("department"),
-          width: 1500,
+          width: 1800,
         })
       ),
       this.ecs,
