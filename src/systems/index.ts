@@ -20,13 +20,10 @@ import {
   Drawable,
   Dragging,
   Scrollable,
-<<<<<<< HEAD
   Transparent,
   Nameable,
-=======
   Layouted,
   Animated,
->>>>>>> origin/master
 } from "./../components/index";
 import { System, Entity } from "../ECS";
 import { TRANSFORM_ELEMENT } from "../constants";

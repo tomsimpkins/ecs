@@ -141,10 +141,6 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
   return result;
 };
 
-<<<<<<< HEAD
-// called on low-level shapes
-export const addShapeToECS = (shapes: LowLevelShape[], ecs: ECS): void => {
-=======
 export const addShapeToECS = (
   shapes: LowLevelShape[],
   ecs: ECS,
@@ -156,7 +152,6 @@ export const addShapeToECS = (
     lookup[existing.ref] = entity;
   }
 
->>>>>>> origin/master
   for (const shape of shapes) {
     const existingEntity = lookup[shape.nodeReference!];
     let entity;
