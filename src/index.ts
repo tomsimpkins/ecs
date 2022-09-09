@@ -1,5 +1,5 @@
 import { Transform } from "./components/index";
-import { createColumn } from "./createEntity/createColumn";
+import { generateColumns } from "./createEntity/generateColumns";
 import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
@@ -35,15 +35,15 @@ createRect(ecs, 80, 80);
 createRect(ecs, 50, 40);
 createBackground(ecs);
 
-const columnContents = [1, 2, 3, 4, 5, 6];
+const testBucketGroups = groupByBuckets("role");
 
-createColumn(
-  ecs,
-  { x: 250, y: 100 },
-  { height: 300, width: 60 },
-  "Test column",
-  columnContents
-);
+const salesManagerBuckets = testBucketGroups.filter(
+  (b) => b.bucketKey === "Sales manager"
+)[0];
+
+const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname");
+
+generateColumns(ecs, testBucketGroups);
 
 // add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KeyboardInputSystem(), ["keyboard"]);
@@ -85,17 +85,9 @@ const go = () => {
   });
 };
 
-const testBucketGroups = groupByBuckets("role");
-
-const salesManagerBuckets = testBucketGroups.filter(
-  (b) => b.bucketKey === "Sales manager"
-)[0];
-
-const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname");
-
 // console.log({testBucketGroups})
 // console.log({salesManagerBuckets})
-console.log({ names });
+console.log({ testBucketGroups, names });
 // console.log(getBucketCountsFromProperty(filterByPropertyKey("role")))
 
 go();
