@@ -59,7 +59,7 @@ export const pictograph = (o: PictographOptions): HighLevelShape[] => {
         itemWidth,
         bucket,
       },
-      { type: "rect", x: o.x + i * columnWidth, y: o.y, w: 2, h: -200 },
+      { type: "rect", x: o.x + i * columnWidth, y: o.y - 200, w: 2, h: 200 },
       { type: "text", x: o.x + i * columnWidth, y: o.y + 14, text: bucket.key },
     ])
     .concat(axes);
