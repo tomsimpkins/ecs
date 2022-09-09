@@ -184,7 +184,10 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
         break;
       }
       case "text":
-      case "rect":
+      case "rect": {
+        result.push(shape);
+        break;
+      }
       default: {
         throw new Error(`shape ${shape.type} not recognized`);
       }
