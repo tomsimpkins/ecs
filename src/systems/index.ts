@@ -553,8 +553,28 @@ export class RenderDebugSystem extends System {
     super();
   }
 
+  private fps: number = 0;
+  private frameCount: number = 0;
+  private frameCountStart: number = NaN;
+  private tick() {
+    const now = Date.now();
+    if (isNaN(this.frameCountStart)) {
+      this.frameCountStart = Date.now();
+    }
+    this.frameCount++;
+
+    const dt = now - this.frameCountStart;
+    if (dt >= 1000) {
+      this.fps = (1000 / dt) * this.frameCount;
+      this.frameCount = 0;
+      this.frameCountStart = now;
+    }
+  }
+
   componentsRequired = new Set([Pannable]);
-  update(entities: Set<Entity>) {
+  update(entities: Set<Entity>, event) {
+    this.tick();
+
     const matrix = this.ecs
       .getComponents(TRANSFORM_ELEMENT)
       .get(Transform).matrix;
@@ -567,6 +587,7 @@ export class RenderDebugSystem extends System {
       this.ctx.resetTransform();
       this.ctx.fillText(`Pan: ${pan.x},${pan.y}`, 5, 12);
       this.ctx.fillText(`Zoom: ${matrix.a},${matrix.d}`, 5, 24);
+      this.ctx.fillText(`FPS: ${this.fps.toFixed(1)}`, 5, 36);
 
       this.ctx.restore();
 
