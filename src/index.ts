@@ -1,4 +1,4 @@
-import { AnimationSystem, LayoutSystem } from "./systems/index";
+import { AnimationSystem, LayoutSystem, RenderSystem2 } from "./systems/index";
 import { Transform } from "./components/index";
 import { generateColumns } from "./createEntity/generateColumns";
 import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
@@ -44,7 +44,7 @@ const salesManagerBuckets = testBucketGroups.filter(
 
 const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname");
 
-generateColumns(ecs, testBucketGroups);
+// generateColumns(ecs, testBucketGroups);
 
 // add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KeyboardInputSystem(), ["keyboard"]);
@@ -66,6 +66,7 @@ ecs.addSystem(new RenderSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
 ecs.addSystem(new RenderDebugSystem(canvas, ctx), "frame");
 ecs.addSystem(new RenderDragSelectionSystem(ctx), "frame");
+ecs.addSystem(new RenderSystem2(canvas, ctx), ["frame"]);
 
 const go = () => {
   const obs = createInputEventObservable(canvas);

@@ -17,7 +17,11 @@ export class BoundingBoxable extends Component {
     super();
   }
 }
-export class Drawable extends Component {}
+export class Drawable extends Component {
+  constructor(public shape?) {
+    super();
+  }
+}
 export class Selectable extends Component {}
 export class Selected extends Component {}
 export class Clickable extends Component {}
@@ -55,7 +59,7 @@ export class Zoomable extends Component {
 
 export class SelectionDragBox extends Component {}
 export class Layouted extends Component {
-  constructor(public ref: number) {
+  constructor(public nodeReference?: number) {
     super();
   }
 }
