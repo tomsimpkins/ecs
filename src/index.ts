@@ -1,7 +1,6 @@
 import { AnimationSystem, LayoutSystem, RenderSystem2 } from "./systems/index";
 import { Transform } from "./components/index";
 
-import { groupByBuckets, parseIndicesToValues } from "./dataLayer/dataQuery";
 import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
 import { createBackground, createRect } from "./init/utils";
@@ -35,16 +34,6 @@ createRect(ecs, 60, 10);
 createRect(ecs, 80, 80);
 createRect(ecs, 50, 40);
 createBackground(ecs);
-
-const testBucketGroups = groupByBuckets("role");
-
-const salesManagerBuckets = testBucketGroups.filter(
-  (b) => b.bucketKey === "Sales manager"
-)[0];
-
-const names = parseIndicesToValues(salesManagerBuckets.itemIndices, "fullname");
-
-// generateColumns(ecs, testBucketGroups);
 
 // add all the systems, which subscribe to the appropriate events
 ecs.addSystem(new KeyboardInputSystem(), ["keyboard"]);
