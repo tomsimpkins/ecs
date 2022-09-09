@@ -1,3 +1,4 @@
+import { groupByBuckets } from "./../dataLayer/dataQuery";
 import {
   addShapeToECS,
   column,
@@ -638,23 +639,12 @@ export class LayoutSystem extends System {
     addShapeToECS(
       compileShapes(
         pictograph({
-          itemHeight: 20,
-          itemWidth: 20,
+          itemHeight: 10,
+          itemWidth: 10,
           x: 200,
           y: 200,
-          buckets: b
-            ? [
-                { key: "manchester", itemIndices: [1, 2, 3, 4] },
-                { key: "birmingham", itemIndices: [5, 6, 7, 8, 9, 10] },
-              ]
-            : [
-                {
-                  key: "manchester",
-                  itemIndices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                },
-                { key: "birmingham", itemIndices: [] },
-              ],
-          width: 1000,
+          buckets: groupByBuckets("department"),
+          width: 1500,
         })
       ),
       this.ecs,
