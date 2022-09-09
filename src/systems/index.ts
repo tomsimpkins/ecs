@@ -159,7 +159,6 @@ export class MouseStartSystem extends System {
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
 
         if (entity !== undefined) {
-          console.log({entity})
           this.ecs.enqueueEvent({ type: "selectEntity", entity });
         }
         break;
