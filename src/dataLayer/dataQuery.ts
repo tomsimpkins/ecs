@@ -11,7 +11,7 @@ const keyIndicesMap = new Map([
 ]);
 
 export type bucket = {
-  bucketKey: string;
+  key: string;
   itemIndices: number[];
 };
 
@@ -51,7 +51,7 @@ export const groupByBuckets = (key: string): bucket[] => {
   }
 
   const groupedBuckets: bucket[] = bucketKeys.map((b) => ({
-    bucketKey: `${b}`,
+    key: `${b}`,
     itemIndices: bucketsMap.get(b)!,
   }));
 
