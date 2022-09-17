@@ -1,8 +1,32 @@
-import { createRect } from "./../init/utils";
-import { Positionable, Transform } from "./../components/index";
-import { System, Entity } from "../ECS";
-import { TRANSFORM_ELEMENT } from "../constants";
+import {
+  BoundingBoxable,
+  Clickable,
+  Drawable,
+  Positionable,
+  Selectable,
+  Transform,
+  Velocityable,
+} from "./../components/index";
+import { System, Entity, ECS } from "../ECS";
+import { RECT_HEIGHT, RECT_WIDTH, TRANSFORM_ELEMENT } from "../constants";
 import { Position } from "./index";
+
+export const createRect = (ecs: ECS, x: number, y: number) => {
+  const clickable = new Clickable();
+  const position = new Positionable(x, y, 1);
+  const velocity = new Velocityable(0, 0);
+  const box = new BoundingBoxable(RECT_WIDTH, RECT_HEIGHT);
+  const draw = new Drawable();
+  const select = new Selectable();
+
+  const rect = ecs.addEntity();
+  ecs.addComponent(rect, clickable);
+  ecs.addComponent(rect, position);
+  ecs.addComponent(rect, velocity);
+  ecs.addComponent(rect, box);
+  ecs.addComponent(rect, draw);
+  ecs.addComponent(rect, select);
+};
 
 export class DoubleClickHandlerSystem extends System {
   constructor() {
