@@ -1,4 +1,16 @@
-import mockdata from "./mockdata.json";
+import rawMockdata from "./mockdata.json";
+
+const SCALE = 5;
+const mockdata = {
+  headers: rawMockdata.headers,
+  columns: rawMockdata.columns.map((col, i) => {
+    const r = Array.from({ length: SCALE }).flatMap(() => col);
+    if (i === 0) {
+      return r.map((_, i) => i);
+    }
+    return r;
+  }),
+};
 
 const keyIndicesMap = new Map([
   ["id", 0],
