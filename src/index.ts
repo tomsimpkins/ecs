@@ -3,24 +3,24 @@ import { ECS } from "./ECS";
 import { createInputEventObservable } from "./eventStreams";
 import { createBackground } from "./init/utils";
 import {
-  DoubleClickHandlerSystem,
   KeyboardInputSystem,
   MouseScrollSystem,
   MouseStartSystem,
-  MovementSystem,
-  RenderDebugSystem,
-  RenderDragSelectionSystem,
-  RenderDragSystem,
-  RenderSelectionSystem,
-  SelectionByAreaSystem,
   SelectionSystem,
   ZoomSystem,
 } from "./systems";
+
 import {
   AnimationSystem,
+  RenderDragSystem,
   LayoutSystem,
   RenderLayoutSystem,
-} from "./systems/index";
+  SelectionByAreaSystem,
+  MovementSystem,
+  RenderSelectionSystem,
+  RenderDebugSystem,
+  RenderDragSelectionSystem,
+} from "./systems";
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement;
 canvas.width = window.innerWidth - 16;
