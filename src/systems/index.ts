@@ -18,50 +18,17 @@ import {
   Drawable,
   Dragging,
   Scrollable,
-  Layouted,
   PanZoomable,
-  Animated,
 } from "./../components/index";
 import { System, Entity } from "../ECS";
 import { TRANSFORM_ELEMENT } from "../constants";
-
-export class KeyboardInputSystem extends System {
-  componentsRequired = new Set([Selected, Velocityable]); // you only move things which are selected and moveable
-
-  update(entities: Set<Entity>, event) {
-    const keys = event.keys;
-
-    let vy: number | undefined;
-    if (keys.has("ArrowUp")) {
-      vy = -1;
-    } else if (keys.has("ArrowDown")) {
-      vy = 1;
-    }
-
-    let vx: number | undefined;
-    if (keys.has("ArrowRight")) {
-      vx = 1;
-    } else if (keys.has("ArrowLeft")) {
-      vx = -1;
-    }
-
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-
-      const velocity = comps.get(Velocityable);
-      if (vx === undefined) {
-        velocity.vx = 0;
-      } else {
-        velocity.vx += vx;
-      }
-      if (vy === undefined) {
-        velocity.vy = 0;
-      } else {
-        velocity.vy += vy;
-      }
-    }
-  }
-}
+export * from "./KeyboardInputSystem";
+import { PanSystem } from "./PanSystem";
+export { PanSystem };
+export * from "./ZoomSystem";
+export * from "./SelectionSystem";
+export * from "./AnimationSystem";
+export * from "./LayoutSystem";
 
 export class DoubleClickHandlerSystem extends System {
   constructor() {
@@ -160,7 +127,7 @@ export class MouseStartSystem extends System {
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
 
         if (entity === undefined && event.button === 0) {
-          this.ecs.addSystem(new DragSelectionHandlerSystem(), [
+          this.ecs.addSystem(new DragSelectionSystem(), [
             "dragmove",
             "dragend",
           ]);
@@ -204,36 +171,6 @@ export class MouseScrollSystem extends System {
       });
       break;
     }
-  }
-}
-
-export class ZoomSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
-    super();
-  }
-
-  componentsRequired = new Set([PanZoomable]);
-  update(entities: Set<Entity>, event) {
-    console.log(event);
-    const [entity] = entities;
-
-    const transform = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform);
-    const { d } = event;
-    const scaleFactor = d <= 0 ? 1.2 : 1 / 1.2;
-
-    const matrix = transform.matrix;
-    transform.matrix = new DOMMatrix([
-      matrix.a * scaleFactor,
-      0,
-      0,
-      matrix.a * scaleFactor,
-      event.x - (event.x - matrix.e) * scaleFactor,
-      event.y - (event.y - matrix.f) * scaleFactor,
-    ]);
-
-    const panZoom = this.ecs.getComponents(entity).get(PanZoomable);
-    panZoom.x = transform.matrix.e;
-    panZoom.y = transform.matrix.f;
   }
 }
 
@@ -286,7 +223,7 @@ export class DragElementSystem extends System {
   }
 }
 
-export class DragSelectionHandlerSystem extends System {
+export class DragSelectionSystem extends System {
   componentsRequired = new Set([
     SelectionDragBox,
     Positionable,
@@ -330,54 +267,6 @@ export class DragSelectionHandlerSystem extends System {
       };
 
       this.ecs.enqueueEvent(selectAreaEvent);
-    }
-  }
-}
-
-export class PanSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
-    super();
-  }
-  componentsRequired = new Set([PanZoomable]);
-  update(entities: Set<Entity>, event) {
-    if (entities.size !== 1) {
-      console.warn("exited pan due to multiple pannable elements");
-      return;
-    }
-
-    const [entity] = entities;
-    const comps = this.ecs.getComponents(entity);
-    const pan = comps.get(PanZoomable);
-    const transform = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform);
-    const currentMatrix = transform.matrix;
-
-    currentMatrix.e = pan.x + event.dx;
-    currentMatrix.f = pan.y + event.dy;
-
-    if (event.type === "dragend") {
-      pan.x = currentMatrix.e;
-      pan.y = currentMatrix.f;
-
-      this.ecs.removeSystem(this);
-    }
-  }
-}
-
-export class SelectionSystem extends System {
-  componentsRequired = new Set([Selectable]);
-  update(entities: Set<Entity>, event) {
-    if (!entities.has(event.entity)) {
-      return;
-    }
-
-    const { entity } = event;
-    const comps = this.ecs.getComponents(entity);
-    const selected = comps.has(Selected);
-
-    if (selected) {
-      this.ecs.removeComponent(entity, Selected);
-    } else {
-      this.ecs.addComponent(entity, new Selected());
     }
   }
 }
@@ -650,62 +539,5 @@ export class RenderDragSelectionSystem extends System {
     this.ctx.fillRect(position.x, position.y, box.w, box.h);
 
     this.ctx.restore();
-  }
-}
-
-export class LayoutSystem extends System {
-  componentsRequired = new Set([Layouted]);
-  update(entities: Set<Entity>, event) {
-    const ecs = this.ecs;
-    const entitiesToRetain: Set<Entity> = new Set();
-    for (const entity of entities) {
-      const layout = ecs.getComponents(entity).get(Layouted);
-      if (layout.nodeReference !== undefined) {
-        entitiesToRetain.add(entity);
-      } else {
-        ecs.removeEntity(entity);
-      }
-    }
-
-    addShapeToECS(
-      compileShapes(
-        pictograph({
-          itemHeight: 10,
-          itemWidth: 10,
-          x: 10,
-          y: 800,
-          width: 1800,
-          buckets: groupByBuckets(event.groupBy),
-        })
-      ),
-      this.ecs,
-      entitiesToRetain
-    );
-  }
-}
-
-export class AnimationSystem extends System {
-  componentsRequired = new Set([Animated, Positionable]);
-  update(entities: Set<Entity>) {
-    const t = Date.now();
-
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const animation = comps.get(Animated);
-      const position = comps.get(Positionable);
-
-      const { fromT, fromX, fromY, toT, toX, toY } = animation;
-      if (t >= toT) {
-        position.x = toX;
-        position.y = toY;
-
-        this.ecs.removeComponent(entity, Animated);
-        continue;
-      }
-
-      const proportionDone = (t - fromT) / (toT - fromT);
-      position.x = fromX + proportionDone * (toX - fromX);
-      position.y = fromY + proportionDone * (toY - fromY);
-    }
   }
 }
