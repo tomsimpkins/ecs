@@ -7,9 +7,8 @@ import {
   BoundingBoxable,
   Drawable,
   Selectable,
-  Pannable,
-  Zoomable,
   Scrollable,
+  PanZoomable,
 } from "../components/index";
 
 export const createRect = (ecs: ECS, x: number, y: number) => {
@@ -30,14 +29,12 @@ export const createRect = (ecs: ECS, x: number, y: number) => {
 };
 
 export const createBackground = (ecs: ECS) => {
-  const pan = new Pannable(0, 0);
   const clickable = new Clickable();
-  const zoom = new Zoomable(1);
   const scroll = new Scrollable();
+  const panZoomable = new PanZoomable(0, 0, 1);
 
   const background = ecs.addEntity();
-  ecs.addComponent(background, pan);
   ecs.addComponent(background, clickable);
-  ecs.addComponent(background, zoom);
   ecs.addComponent(background, scroll);
+  ecs.addComponent(background, panZoomable);
 };
