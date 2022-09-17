@@ -15,6 +15,8 @@ type ColumnShape = {
   bucket: { key: string; itemIndices: number[] };
   itemWidth: number;
   itemHeight: number;
+  padding: number;
+  gap: number;
   x: number;
   y: number;
   width: number;
@@ -43,27 +45,33 @@ type PictographOptions = {
 // will query nodes to get buckets
 export const pictograph = (o: PictographOptions): HighLevelShape[] => {
   const { buckets, itemHeight, itemWidth, width } = o;
-  const columnWidth = width / buckets.length;
+  const columnWidth = (width / buckets.length) | 0;
+
   const axes: HighLevelShape[] = [
     { type: "rect", x: o.x, y: o.y, w: width, h: 2 },
   ];
+
+  const axisLineWidth = 2;
+  const rectPackWidth = columnWidth - axisLineWidth;
 
   return buckets
     .flatMap<HighLevelShape>((bucket, i) => [
       {
         type: "column",
-        x: o.x + i * columnWidth,
+        x: o.x + i * columnWidth + axisLineWidth,
         y: o.y,
-        width: columnWidth,
+        width: rectPackWidth,
         itemHeight,
         itemWidth,
+        padding: 3,
+        gap: 3,
         bucket,
       },
       {
         type: "rect",
         x: o.x + i * columnWidth,
         y: o.y - 200,
-        w: 2,
+        w: axisLineWidth,
         h: 200,
       },
       { type: "text", x: o.x + i * columnWidth, y: o.y + 14, text: bucket.key },
@@ -71,24 +79,27 @@ export const pictograph = (o: PictographOptions): HighLevelShape[] => {
     .concat(axes);
 };
 
-export const compileColumn = (o: ColumnShape): HighLevelShape[] => {
-  const { bucket, width, itemHeight, itemWidth } = o;
+const packRects = (o: ColumnShape): HighLevelShape[] => {
+  const { gap, bucket, width: totalWidth, itemHeight, itemWidth, padding } = o;
+  const width = totalWidth - 2 * padding;
 
-  const itemsPerRow = (width / (itemWidth + 3)) | 0;
+  const itemsPerRow = ((width + gap) / (itemWidth + gap)) | 0;
 
   const result: HighLevelShape[] = [];
   const getRowColumn = (index: number) => [
-    index % itemsPerRow,
     (index / itemsPerRow) | 0,
+    index % itemsPerRow,
   ];
 
+  const totalUsedWidth = itemsPerRow * (itemWidth + gap) - gap;
+  const offset = (width - totalUsedWidth) / 2;
   for (let i = 0; i < bucket.itemIndices.length; i++) {
     const [r, c] = getRowColumn(i);
 
     result.push({
       type: "rect",
-      x: 8 + o.x + r * (itemWidth + 2),
-      y: o.y - 12 - c * (itemWidth + 2),
+      x: o.x + padding + offset + c * (itemWidth + gap),
+      y: o.y - offset - padding - r * (itemWidth + gap) - itemWidth,
       w: itemWidth,
       h: itemHeight,
       nodeReference: bucket.itemIndices[i],
@@ -186,7 +197,7 @@ export const compileShapes = (shapes: HighLevelShape[]): LowLevelShape[] => {
   for (const shape of shapes) {
     switch (shape.type) {
       case "column": {
-        result.push(...compileShapes(compileColumn(shape)));
+        result.push(...compileShapes(packRects(shape)));
         break;
       }
       case "text":
@@ -251,8 +262,12 @@ export const addShapeToECS = (
 
         ecs.addComponent(entity, new BoundingBoxable(shape.w, shape.h));
         ecs.addComponent(entity, new Drawable(shape));
-        ecs.addComponent(entity, new Clickable());
-        ecs.addComponent(entity, new Selectable());
+
+        if (shape.nodeReference !== undefined) {
+          ecs.addComponent(entity, new Clickable());
+          ecs.addComponent(entity, new Selectable());
+        }
+
         break;
       }
 
@@ -273,12 +288,6 @@ export const drawShapeToCanvas = (
 ): void => {
   switch (shape.type) {
     case "rect": {
-      ctx.fillStyle = shape.nodeReference
-        ? `rgb(${shape!.nodeReference / (1505 / 255)}, ${
-            1 - shape!.nodeReference / (1505 / 255)
-          }, ${124})`
-        : "black";
-
       ctx.fillRect(position.x, position.y, shape.w, shape.h);
       break;
     }
