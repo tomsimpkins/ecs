@@ -1,16 +1,9 @@
-import { groupByBuckets } from "./../dataLayer/dataQuery";
-import {
-  addShapeToECS,
-  compileShapes,
-  drawShapeToCanvas,
-  pictograph,
-} from "./../graphics/shapes";
+import { drawShapeToCanvas } from "./../graphics/shapes";
 import { createRect } from "./../init/utils";
 import {
   Selected,
   Velocityable,
   Positionable,
-  Clickable,
   BoundingBoxable,
   Transform,
   SelectionDragBox,
@@ -29,6 +22,10 @@ export * from "./ZoomSystem";
 export * from "./SelectionSystem";
 export * from "./AnimationSystem";
 export * from "./LayoutSystem";
+export * from "./MouseStartSystem";
+export * from "./DragElementSystem";
+export * from "./DragSelectionSystem";
+export * from "./MouseScrollSystem";
 
 export class DoubleClickHandlerSystem extends System {
   constructor() {
@@ -53,223 +50,6 @@ export class DoubleClickHandlerSystem extends System {
 }
 
 type Position = { x: number; y: number };
-export class MouseStartSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
-    super();
-  }
-
-  private toLocalCoords = (pos: Position, m: DOMMatrix): Position => {
-    return new DOMPoint(pos.x, pos.y).matrixTransform(m);
-  };
-
-  private entityHitTest(
-    entities: Iterable<Entity>,
-    point: Position,
-    dims: { w: number; h: number } = { w: 0, h: 0 }
-  ): Entity[] {
-    const { x, y } = point;
-    const { w, h } = dims;
-
-    const results: Entity[] = [];
-    for (const entity of entities) {
-      const comps = this.ecs.getComponents(entity);
-      const position = comps.get(Positionable);
-      const box = comps.get(BoundingBoxable);
-
-      if (
-        x + w < position.x ||
-        x > position.x + box.w ||
-        y + h < position.y ||
-        y > position.y + box.h
-      ) {
-        continue;
-      }
-
-      results.push(entity);
-    }
-
-    return results;
-  }
-
-  private maxByZ = (entities: Entity[]): Entity | undefined => {
-    if (entities.length === 0) {
-      return undefined;
-    }
-
-    return entities
-      .map<[number, Entity]>((entity) => [
-        this.ecs.getComponents(entity).get(Positionable).z,
-        entity,
-      ])
-      .reduce((acc, item) => (item[0] > acc[0] ? item : acc))[1];
-  };
-
-  componentsRequired = new Set([Clickable, Positionable, BoundingBoxable]);
-  update(entities: Set<Entity>, event) {
-    const transformMatrix = this.ecs
-      .getComponents(TRANSFORM_ELEMENT)
-      .get(Transform)
-      .matrix.inverse();
-
-    switch (event.type) {
-      case "click": {
-        const pos = this.toLocalCoords(event, transformMatrix);
-        const entity = this.maxByZ(this.entityHitTest(entities, pos));
-        console.log(entity);
-
-        if (entity !== undefined) {
-          this.ecs.enqueueEvent({ type: "selectEntity", entity });
-        }
-        break;
-      }
-      case "dragstart": {
-        const pos = this.toLocalCoords(event, transformMatrix);
-        const entity = this.maxByZ(this.entityHitTest(entities, pos));
-
-        if (entity === undefined && event.button === 0) {
-          this.ecs.addSystem(new DragSelectionSystem(), [
-            "dragmove",
-            "dragend",
-          ]);
-
-          const dragEl = this.ecs.addEntity();
-          this.ecs.addComponent(dragEl, new Positionable(pos.x, pos.y, 2));
-          this.ecs.addComponent(dragEl, new BoundingBoxable(0, 0));
-          this.ecs.addComponent(dragEl, new SelectionDragBox());
-        } else if (entity === undefined) {
-          this.ecs.addSystem(new PanSystem(this.ctx), ["dragmove", "dragend"]);
-        } else {
-          const dragEl = this.ecs.addEntity();
-          const positionable = this.ecs.getComponents(entity).get(Positionable);
-
-          this.ecs.addComponent(entity, new Dragging(dragEl));
-          this.ecs.addComponent(
-            dragEl,
-            new Positionable(positionable.x, positionable.y, 2)
-          );
-          this.ecs.addSystem(new DragElementSystem(this.ctx), [
-            "dragmove",
-            "dragend",
-          ]);
-        }
-
-        break;
-      }
-    }
-  }
-}
-
-export class MouseScrollSystem extends System {
-  componentsRequired = new Set([Scrollable]);
-  update(entities: Set<Entity>, event, context) {
-    for (const entity of entities) {
-      this.ecs.enqueueEvent({
-        type: "zoom",
-        d: event.d,
-        x: event.x,
-        y: event.y,
-      });
-      break;
-    }
-  }
-}
-
-export class DragElementSystem extends System {
-  constructor(public ctx: CanvasRenderingContext2D) {
-    super();
-  }
-
-  componentsRequired = new Set([Dragging, Positionable]);
-  update(entities: Set<Entity>, event) {
-    if (event.type === "dragmove") {
-      for (const entity of entities) {
-        const comps = this.ecs.getComponents(entity);
-        const originalPosition = comps.get(Positionable);
-        const dragEl = comps.get(Dragging).entityRef;
-
-        const dragPosition = this.ecs.getComponents(dragEl).get(Positionable);
-
-        const mouseToCanvas = this.ecs
-          .getComponents(TRANSFORM_ELEMENT)
-          .get(Transform)
-          .matrix.inverse();
-
-        dragPosition.x = originalPosition.x + mouseToCanvas.a * event.dx;
-        dragPosition.y = originalPosition.y + mouseToCanvas.a * event.dy;
-      }
-    } else if (event.type === "dragend") {
-      for (const entity of entities) {
-        const comps = this.ecs.getComponents(entity);
-        const dragEl = comps.get(Dragging).entityRef;
-
-        const originalPosition = this.ecs
-          .getComponents(entity)
-          .get(Positionable);
-
-        const mouseToCanvas = this.ecs
-          .getComponents(TRANSFORM_ELEMENT)
-          .get(Transform)
-          .matrix.inverse();
-
-        originalPosition.x += mouseToCanvas.a * event.dx;
-        originalPosition.y += mouseToCanvas.a * event.dy;
-
-        this.ecs.removeComponent(entity, Dragging);
-        this.ecs.removeEntity(dragEl);
-      }
-
-      this.ecs.removeSystem(this);
-    }
-  }
-}
-
-export class DragSelectionSystem extends System {
-  componentsRequired = new Set([
-    SelectionDragBox,
-    Positionable,
-    BoundingBoxable,
-  ]);
-  update(entities: Set<Entity>, event) {
-    if (entities.size !== 1) {
-      console.warn(
-        "exited drag selection due to multiple drag selection elements"
-      );
-      return;
-    }
-
-    const [entity] = entities;
-
-    const comps = this.ecs.getComponents(entity);
-    const box = comps.get(BoundingBoxable);
-    const position = comps.get(Positionable);
-    const transform = this.ecs
-      .getComponents(TRANSFORM_ELEMENT)
-      .get(Transform)
-      .matrix.inverse();
-
-    box.w = event.dx * transform.a;
-    box.h = event.dy * transform.d;
-
-    if (event.type === "dragend") {
-      this.ecs.removeComponent(entity, SelectionDragBox);
-      this.ecs.removeEntity(entity);
-
-      this.ecs.removeSystem(this);
-
-      const selectAreaEvent = {
-        type: "selectArea",
-        ...(box.w < 0
-          ? { x: position.x + box.w, w: -box.w }
-          : { x: position.x, w: box.w }),
-        ...(box.h < 0
-          ? { y: position.y + box.h, h: -box.h }
-          : { y: position.y, h: box.h }),
-      };
-
-      this.ecs.enqueueEvent(selectAreaEvent);
-    }
-  }
-}
 
 export class SelectionByAreaSystem extends System {
   componentsRequired = new Set([Selectable, Positionable, BoundingBoxable]);
