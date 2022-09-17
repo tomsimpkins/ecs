@@ -25,13 +25,6 @@ export class Drawable extends Component {
 export class Selectable extends Component {}
 export class Selected extends Component {}
 export class Clickable extends Component {}
-export class Transparent extends Component {}
-
-export class Nameable extends Component {
-  constructor(public name: string) {
-    super();
-  }
-}
 
 export class Dragging extends Component {
   constructor(public entityRef: Entity) {
@@ -46,13 +39,9 @@ export class Transform extends Component {
 }
 
 export class Scrollable extends Component {}
-export class Pannable extends Component {
-  constructor(public x: number, public y: number) {
-    super();
-  }
-}
-export class Zoomable extends Component {
-  constructor(public d: number) {
+
+export class PanZoomable extends Component {
+  constructor(public x: number, public y: number, public d: number) {
     super();
   }
 }
