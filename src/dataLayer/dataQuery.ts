@@ -1,6 +1,6 @@
 import rawMockdata from "./mockdata.json";
 
-const SCALE = 5;
+const SCALE = 10;
 const mockdata = {
   headers: rawMockdata.headers,
   columns: rawMockdata.columns.map((col, i) => {
@@ -55,7 +55,7 @@ export const groupByBuckets = (key: string): bucket[] => {
   for (let i = 0; i < singledColumn.length; i++) {
     const value = singledColumn[i];
     if (bucketsMap.has(value)) {
-      bucketsMap.set(value, bucketsMap.get(value)!.concat(i));
+      bucketsMap.get(value)!.push(i);
     } else {
       bucketsMap.set(value, [i]);
       bucketKeys.push(value);
