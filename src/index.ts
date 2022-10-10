@@ -51,9 +51,10 @@ ecs.addSystem(new AnimationSystem(), ["frame"]);
 
 ecs.addSystem(new RenderLayoutSystem(ctx), ["frame"]);
 ecs.addSystem(new RenderDragSystem(ctx), "frame");
-ecs.addSystem(new RenderDebugSystem(ctx), "frame");
+
 ecs.addSystem(new RenderDragSelectionSystem(ctx), "frame");
 ecs.addSystem(new RenderSelectionSystem(ctx), ["frame"]);
+ecs.addSystem(new RenderDebugSystem(ctx), "frame");
 
 const go = () => {
   const obs = createInputEventObservable(canvas);

@@ -41,7 +41,6 @@ export class SelectionByAreaSystem extends System {
 
   update(entities: Set<Entity>, event) {
     const { x, y, w, h } = event;
-    console.log("select area", { x, y });
 
     for (const entity of entities) {
       const comps = this.ecs.getComponents(entity);

@@ -9,7 +9,6 @@ export class ZoomSystem extends System {
 
   componentsRequired = new Set([PanZoomable]);
   update(entities: Set<Entity>, event) {
-    console.log(event);
     const [entity] = entities;
 
     const transform = this.ecs.getComponents(TRANSFORM_ELEMENT).get(Transform);

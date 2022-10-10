@@ -75,7 +75,6 @@ export class MouseStartSystem extends System {
       case "click": {
         const pos = this.toLocalCoords(event, transformMatrix);
         const entity = this.maxByZ(this.entityHitTest(entities, pos));
-        console.log(entity);
 
         if (entity !== undefined) {
           this.ecs.enqueueEvent({ type: "selectEntity", entity });

@@ -1,4 +1,5 @@
 import { EventBus } from "./eventBus";
+import { Timer } from "./Timer";
 
 // entity is an identifier of a 'thing' in an app
 export type Entity = number;
@@ -15,9 +16,6 @@ export abstract class System {
     context: object
   ): void;
   public ecs: ECS;
-  public respondsTo = (event: string) => {
-    this.ecs.connectSystemToEvent(event, this);
-  };
 }
 
 // this is a simulation - it does things based on logic based on events
@@ -56,6 +54,7 @@ class ComponentContainer {
 }
 
 export class ECS {
+  private timer = new Timer();
   private eventBus = new EventBus();
   private entities = new Map<Entity, ComponentContainer>();
   private systems = new Map<System, Set<Entity>>();
@@ -92,7 +91,6 @@ export class ECS {
   }
 
   // API: Systems
-
   public addSystem(system: System, eventKey?: string | string[]): void {
     // Checking invariant: systems should not have an empty
     // Components list, or they'll run on every entity. Simply remove
@@ -158,7 +156,11 @@ export class ECS {
 
   private updateSystem(system: System, event) {
     const entities = this.systems.get(system)!;
+
+    const n = system.constructor.name;
+    this.timer.time(n);
     system.update(entities, event, { enqueueEvent: this.enqueueEvent });
+    this.timer.timeEnd(n);
   }
 
   // Private methods for doing internal state checks and mutations.

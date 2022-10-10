@@ -4,12 +4,13 @@ type Listener = (event: ECSEvent) => void;
 // every event goes via the event bus
 export class EventBus {
   private eventQueue: ECSEvent[] = [];
-
   private listenersByType: Record<string, Listener[]> = {};
+
   addListener = (type: string, listener: Listener): void => {
     this.listenersByType[type] ??= [];
     this.listenersByType[type].push(listener);
   };
+
   removeListener = (type: string, listener: Listener): boolean => {
     if (!this.listenersByType[type]) {
       return false;

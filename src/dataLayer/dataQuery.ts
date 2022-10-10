@@ -1,10 +1,10 @@
+import { dataScale } from "../config";
 import rawMockdata from "./mockdata.json";
 
-const SCALE = 10;
 const mockdata = {
   headers: rawMockdata.headers,
   columns: rawMockdata.columns.map((col, i) => {
-    const r = Array.from({ length: SCALE }).flatMap(() => col);
+    const r = Array.from({ length: dataScale | 0 }).flatMap(() => col);
     if (i === 0) {
       return r.map((_, i) => i);
     }
